@@ -1,0 +1,68 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ['./index.html', './src/**/*.{js,jsx,ts,tsx}'],
+  theme: {
+    extend: {
+      colors: {
+        bg:                    'rgb(var(--c-bg) / <alpha-value>)',
+        surface:               'rgb(var(--c-surface) / <alpha-value>)',
+        'surface-low':         'rgb(var(--c-surface-low) / <alpha-value>)',
+        'surface-container':   'rgb(var(--c-surface-container) / <alpha-value>)',
+        'surface-high':        'rgb(var(--c-surface-high) / <alpha-value>)',
+        'surface-highest':     'rgb(var(--c-surface-highest) / <alpha-value>)',
+        'surface-lowest':      'rgb(var(--c-surface-lowest) / <alpha-value>)',
+        'surface-2':           'rgb(var(--c-surface-low) / <alpha-value>)',
+        'surface-3':           'rgb(var(--c-surface-high) / <alpha-value>)',
+        'on-surface':          'rgb(var(--c-on-surface) / <alpha-value>)',
+        'on-surface-variant':  'rgb(var(--c-on-surface-variant) / <alpha-value>)',
+        outline:               'rgb(var(--c-outline) / <alpha-value>)',
+        'outline-variant':     'rgb(var(--c-outline-variant) / <alpha-value>)',
+        border:                'rgb(var(--c-border) / <alpha-value>)',
+        'border-2':            'rgb(var(--c-border2) / <alpha-value>)',
+        muted:                 'rgb(var(--c-muted) / <alpha-value>)',
+        gold:                  'rgb(var(--c-gold) / <alpha-value>)',
+        'gold-light':          'rgb(var(--c-gold-light) / <alpha-value>)',
+        'gold-dark':           'rgb(var(--c-gold-dark) / <alpha-value>)',
+        primary:               'rgb(var(--c-gold) / <alpha-value>)',
+        'primary-container':   '#5A430E',
+        'on-primary':          '#402D00',
+        'on-primary-container':'#FFDF9F',
+      },
+      fontFamily: {
+        display:  ['"Space Grotesk"', 'system-ui', 'sans-serif'],
+        headline: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
+        sans:     ['Inter', 'system-ui', 'sans-serif'],
+        body:     ['Inter', 'system-ui', 'sans-serif'],
+        mono:     ['"Space Grotesk"', 'ui-monospace', 'monospace'],
+      },
+      letterSpacing: {
+        widest:  '0.2em',
+        brand:   '0.3em',
+        display: '-0.04em',
+      },
+      animation: {
+        'pulse-slow':  'pulse 4s cubic-bezier(0.4,0,0.6,1) infinite',
+        'spin-slow':   'spin 20s linear infinite',
+        'scroll-hint': 'scrollHint 2s ease-in-out infinite',
+        'marquee':     'marquee 40s linear infinite',
+        'glow':        'glow 3s ease-in-out infinite',
+      },
+      keyframes: {
+        scrollHint: {
+          '0%':   { opacity: '0', transform: 'translateY(-6px)' },
+          '50%':  { opacity: '1' },
+          '100%': { opacity: '0', transform: 'translateY(6px)' },
+        },
+        marquee: {
+          '0%':   { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(-50%)' },
+        },
+        glow: {
+          '0%,100%': { boxShadow: '0 0 20px rgba(200,169,106,0.2)' },
+          '50%':     { boxShadow: '0 0 50px rgba(200,169,106,0.5)' },
+        },
+      },
+    },
+  },
+  plugins: [],
+}
