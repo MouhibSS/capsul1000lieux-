@@ -13,7 +13,7 @@ export default function ChatBotModal() {
         onClick={() => setIsOpen(true)}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
-        className="fixed bottom-6 right-6 z-40 w-14 h-14 bg-gold/20 hover:bg-gold/30 border border-gold/50 text-gold rounded-full flex items-center justify-center transition-all duration-300"
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 w-14 h-14 bg-gold/20 hover:bg-gold/30 border border-gold/50 text-gold rounded-full flex items-center justify-center transition-all shadow-lg hover:shadow-xl"
         aria-label="Open chat"
       >
         <MessageCircle size={24} />
@@ -38,7 +38,7 @@ export default function ChatBotModal() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.85, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="fixed bottom-24 right-6 z-50 w-96 h-[32rem] rounded-xl overflow-hidden"
+              className="fixed inset-4 sm:inset-auto sm:bottom-24 sm:right-6 z-50 w-auto h-auto sm:w-96 sm:h-[32rem] rounded-lg sm:rounded-xl overflow-hidden max-h-[90vh] sm:max-h-none"
             >
               <ChatBot onClose={() => setIsOpen(false)} />
             </motion.div>

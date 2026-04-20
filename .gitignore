@@ -7,3 +7,5 @@ dist
 cdn-images
 *.log
 .vite
+docs/
+supabase/

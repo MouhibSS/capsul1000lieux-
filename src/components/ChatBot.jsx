@@ -11,7 +11,7 @@ const supabase = createClient(
 
 export default function ChatBot({ onClose }) {
   const navigate = useNavigate();
-  const [step, setStep] = useState('greeting'); // greeting, cities, filters, budget, results
+  const [step, setStep] = useState('greeting');
   const [cities, setCities] = useState([]);
   const [allTags, setAllTags] = useState([]);
   const [selectedCity, setSelectedCity] = useState(null);
@@ -21,7 +21,6 @@ export default function ChatBot({ onClose }) {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch cities and tags on load
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -32,11 +31,9 @@ export default function ChatBot({ onClose }) {
 
         if (error) throw error;
 
-        // Get unique cities
         const uniqueCities = [...new Set(data.map(d => d.city))].sort();
         setCities(uniqueCities);
 
-        // Get unique tags
         const tagsSet = new Set();
         data.forEach(d => {
           if (d.tags && Array.isArray(d.tags)) {
@@ -83,7 +80,6 @@ export default function ChatBot({ onClose }) {
 
       if (error) throw error;
 
-      // Filter by tags if selected
       let filtered = data || [];
       if (selectedTags.length > 0) {
         filtered = filtered.filter(loc =>
@@ -113,16 +109,16 @@ export default function ChatBot({ onClose }) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 10 }}
-      className="glass flex flex-col h-full rounded-xl"
+      className="glass flex flex-col h-full rounded-lg sm:rounded-xl"
     >
       {/* Header */}
-      <div className="flex justify-between items-center px-5 py-4 border-b border-outline-variant/20">
-        <h2 className="font-display text-sm font-medium tracking-[0.25em] text-gold uppercase">
+      <div className="flex justify-between items-center px-4 sm:px-5 py-3 sm:py-4 border-b border-outline-variant/20 flex-shrink-0">
+        <h2 className="font-display text-xs sm:text-sm font-medium tracking-[0.25em] text-gold uppercase">
           Capsul Search
         </h2>
         <button
           onClick={onClose}
-          className="text-on-surface-variant hover:text-gold transition-colors"
+          className="text-on-surface-variant hover:text-gold transition-colors p-1"
           aria-label="Close chat"
         >
           <X size={20} />
@@ -130,7 +126,7 @@ export default function ChatBot({ onClose }) {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4">
         <AnimatePresence mode="wait">
           {/* Greeting Step */}
           {step === 'greeting' && (
@@ -141,11 +137,11 @@ export default function ChatBot({ onClose }) {
               exit={{ opacity: 0, y: -20 }}
             >
               <div className="space-y-4">
-                <div className="bg-gold/15 border border-gold/30 rounded-lg p-4">
-                  <p className="text-on-surface font-medium mb-2">
+                <div className="bg-gold/15 border border-gold/30 rounded-lg p-3 sm:p-4">
+                  <p className="text-on-surface font-medium mb-2 text-sm sm:text-base">
                     👋 Hello! I'm your Capsul Assistant
                   </p>
-                  <p className="text-on-surface-variant text-sm">
+                  <p className="text-on-surface-variant text-xs sm:text-sm">
                     I'll help you find the perfect rental location in Tunisia. Let me show you what's available!
                   </p>
                 </div>
@@ -161,7 +157,7 @@ export default function ChatBot({ onClose }) {
                         onClick={() => handleCitySelect(city)}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="px-3 py-2 bg-surface-container/60 hover:bg-gold/20 border border-outline-variant/30 hover:border-gold/40 text-on-surface rounded-lg text-sm transition-all"
+                        className="px-3 py-2 sm:py-2.5 bg-surface-container/60 hover:bg-gold/20 border border-outline-variant/30 hover:border-gold/40 text-on-surface rounded-lg text-xs sm:text-sm transition-all touch-none"
                       >
                         📍 {city}
                       </motion.button>
@@ -171,7 +167,7 @@ export default function ChatBot({ onClose }) {
 
                 <button
                   onClick={() => setStep('cities')}
-                  className="w-full mt-4 bg-gold/20 hover:bg-gold/30 border border-gold/40 text-gold px-4 py-2 rounded-lg transition-colors font-medium text-sm"
+                  className="w-full mt-4 bg-gold/20 hover:bg-gold/30 border border-gold/40 text-gold px-4 py-2.5 sm:py-3 rounded-lg transition-colors font-medium text-xs sm:text-sm"
                 >
                   See all cities
                 </button>
@@ -189,13 +185,13 @@ export default function ChatBot({ onClose }) {
             >
               <button
                 onClick={() => setStep('greeting')}
-                className="flex items-center gap-2 text-gold text-sm mb-4 hover:text-gold-light"
+                className="flex items-center gap-2 text-gold text-xs sm:text-sm mb-4 hover:text-gold-light p-1"
               >
                 <ChevronLeft size={16} />
                 Back
               </button>
 
-              <p className="text-on-surface text-sm mb-4">
+              <p className="text-on-surface text-xs sm:text-sm mb-4">
                 Choose a city:
               </p>
 
@@ -213,7 +209,7 @@ export default function ChatBot({ onClose }) {
                       onClick={() => handleCitySelect(city)}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      className="px-3 py-2 bg-gold/15 hover:bg-gold/25 border border-gold/40 text-on-surface rounded-lg text-sm transition-colors"
+                      className="px-3 py-2 sm:py-2.5 bg-gold/15 hover:bg-gold/25 border border-gold/40 text-on-surface rounded-lg text-xs sm:text-sm transition-colors touch-none"
                     >
                       {city}
                     </motion.button>
@@ -233,38 +229,46 @@ export default function ChatBot({ onClose }) {
             >
               <button
                 onClick={() => setStep('greeting')}
-                className="flex items-center gap-2 text-gold text-sm mb-4 hover:text-gold-light"
+                className="flex items-center gap-2 text-gold text-xs sm:text-sm mb-4 hover:text-gold-light p-1"
               >
                 <ChevronLeft size={16} />
                 Back
               </button>
 
-              <p className="text-on-surface text-sm mb-4">
+              <p className="text-on-surface text-xs sm:text-sm mb-4">
                 Filters for <span className="text-gold font-medium">{selectedCity}</span>:
               </p>
 
               <div className="space-y-4">
                 {/* Budget Range */}
                 <div>
-                  <label className="text-on-surface-variant text-xs mb-2 block font-medium">
+                  <label className="text-on-surface-variant text-xs mb-3 block font-medium">
                     BUDGET: €{minPrice} - €{maxPrice}/night
                   </label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="5000"
-                    value={minPrice}
-                    onChange={e => setMinPrice(parseInt(e.target.value))}
-                    className="w-full h-2 bg-surface-container rounded-lg appearance-none cursor-pointer"
-                  />
-                  <input
-                    type="range"
-                    min="0"
-                    max="5000"
-                    value={maxPrice}
-                    onChange={e => setMaxPrice(parseInt(e.target.value))}
-                    className="w-full h-2 bg-surface-container rounded-lg appearance-none cursor-pointer mt-2"
-                  />
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-on-surface-variant text-xs mb-2">Min: €{minPrice}</p>
+                      <input
+                        type="range"
+                        min="0"
+                        max="5000"
+                        value={minPrice}
+                        onChange={e => setMinPrice(parseInt(e.target.value))}
+                        className="w-full h-2 bg-surface-container rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-on-surface-variant text-xs mb-2">Max: €{maxPrice}</p>
+                      <input
+                        type="range"
+                        min="0"
+                        max="5000"
+                        value={maxPrice}
+                        onChange={e => setMaxPrice(parseInt(e.target.value))}
+                        className="w-full h-2 bg-surface-container rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Tags Filter */}
@@ -279,7 +283,7 @@ export default function ChatBot({ onClose }) {
                           key={tag}
                           onClick={() => toggleTag(tag)}
                           whileTap={{ scale: 0.95 }}
-                          className={`px-3 py-1 rounded-full text-xs transition-all ${
+                          className={`px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full text-xs transition-all touch-none ${
                             selectedTags.includes(tag)
                               ? 'bg-gold/30 border border-gold text-gold'
                               : 'bg-surface-container/60 border border-outline-variant/20 text-on-surface-variant hover:border-gold/40'
@@ -295,7 +299,7 @@ export default function ChatBot({ onClose }) {
                 <button
                   onClick={handleSearch}
                   disabled={loading}
-                  className="w-full mt-4 bg-gold/20 hover:bg-gold/30 border border-gold/40 text-gold px-4 py-3 rounded-lg disabled:opacity-50 transition-colors font-medium text-sm"
+                  className="w-full mt-4 bg-gold/20 hover:bg-gold/30 border border-gold/40 text-gold px-4 py-2.5 sm:py-3 rounded-lg disabled:opacity-50 transition-colors font-medium text-xs sm:text-sm"
                 >
                   {loading ? 'Searching...' : 'Search Locations'}
                 </button>
@@ -313,7 +317,7 @@ export default function ChatBot({ onClose }) {
             >
               <button
                 onClick={() => setStep('filters')}
-                className="flex items-center gap-2 text-gold text-sm mb-4 hover:text-gold-light"
+                className="flex items-center gap-2 text-gold text-xs sm:text-sm mb-4 hover:text-gold-light p-1"
               >
                 <ChevronLeft size={16} />
                 Change filters
@@ -326,12 +330,12 @@ export default function ChatBot({ onClose }) {
 
               {results.length === 0 ? (
                 <div className="text-center py-6">
-                  <p className="text-on-surface-variant text-sm">
+                  <p className="text-on-surface-variant text-xs sm:text-sm">
                     No locations match your filters.
                   </p>
                   <button
                     onClick={() => setStep('filters')}
-                    className="text-gold text-sm mt-2 hover:text-gold-light"
+                    className="text-gold text-xs sm:text-sm mt-2 hover:text-gold-light"
                   >
                     Adjust filters →
                   </button>
@@ -345,11 +349,11 @@ export default function ChatBot({ onClose }) {
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       whileHover={{ scale: 1.02 }}
-                      className="w-full text-left p-3 bg-surface-container/60 hover:bg-surface-container/80 border border-outline-variant/20 hover:border-gold/40 rounded-lg transition-all cursor-pointer group"
+                      className="w-full text-left p-3 bg-surface-container/60 hover:bg-surface-container/80 border border-outline-variant/20 hover:border-gold/40 rounded-lg transition-all cursor-pointer group touch-none active:bg-surface-container/90"
                     >
                       <div className="flex justify-between items-start gap-2">
-                        <div className="flex-1">
-                          <h3 className="text-on-surface font-medium text-sm group-hover:text-gold transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-on-surface font-medium text-xs sm:text-sm group-hover:text-gold transition-colors line-clamp-2">
                             {location.name}
                           </h3>
                           <p className="text-on-surface-variant text-xs mt-1">
@@ -358,15 +362,15 @@ export default function ChatBot({ onClose }) {
                           {location.tags && location.tags.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-2">
                               {location.tags.slice(0, 2).map(tag => (
-                                <span key={tag} className="px-2 py-0.5 text-xs bg-gold/20 text-gold rounded-full">
+                                <span key={tag} className="px-1.5 py-0.5 text-xs bg-gold/20 text-gold rounded-full">
                                   {tag}
                                 </span>
                               ))}
                             </div>
                           )}
                         </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="text-gold font-medium text-sm">
+                        <div className="text-right flex-shrink-0 ml-2">
+                          <p className="text-gold font-medium text-sm sm:text-base">
                             €{location.price}
                           </p>
                           <p className="text-on-surface-variant text-xs">per night</p>
