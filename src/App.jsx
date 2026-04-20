@@ -9,6 +9,7 @@ import CursorEffect from './components/CursorEffect'
 import ScrollProgress from './components/ScrollProgress'
 import ScrollToTop from './components/ScrollToTop'
 import CookieConsent from './components/CookieConsent'
+import ChatBotModal from './components/ChatBotModal'
 import Home from './pages/Home'
 import Explore from './pages/Explore'
 import LocationDetail from './pages/LocationDetail'
@@ -55,6 +56,7 @@ export default function App() {
           <AnimatedRoutes />
           <Footer />
           <CookieConsent />
+          <ChatBotModal />
         </BrowserRouter>
       </AuthProvider>
     </LanguageProvider>
