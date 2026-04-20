@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { ArrowUpRight } from 'lucide-react'
+import { ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react'
 import { getAboutImageUrl } from '../utils/cdn'
+import { useRef, useState } from 'react'
+import { useScroll, useTransform } from 'framer-motion'
 
 const ease = [0.22, 1, 0.36, 1]
 
@@ -37,16 +39,45 @@ const team = [
 ]
 
 export default function About() {
+  const [currentImage, setCurrentImage] = useState(0)
+  const [touchStart, setTouchStart] = useState(null)
+  const [touchEnd, setTouchEnd] = useState(null)
+  const images = [1, 2, 3]
+  const sectionRef = useRef(null)
+  const carouselRef = useRef(null)
+  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ['start center', 'end center'] })
+  const shimmerShift = useTransform(scrollYProgress, [0, 1], [0, 1])
+
+  const nextImage = () => setCurrentImage((prev) => (prev + 1) % images.length)
+  const prevImage = () => setCurrentImage((prev) => (prev - 1 + images.length) % images.length)
+
+  const handleTouchStart = (e) => setTouchStart(e.targetTouches[0].clientX)
+  const handleTouchEnd = (e) => {
+    setTouchEnd(e.changedTouches[0].clientX)
+    if (touchStart === null) return
+    const distance = touchStart - e.changedTouches[0].clientX
+    const isLeftSwipe = distance > 50
+    const isRightSwipe = distance < -50
+    if (isLeftSwipe) nextImage()
+    if (isRightSwipe) prevImage()
+  }
+
   return (
     <motion.div variants={pageVariants} initial="initial" animate="enter" exit="exit" className="min-h-screen bg-bg">
       {/* Hero */}
-      <section className="relative pt-28 md:pt-40 pb-16 md:pb-24 border-b border-outline-variant/25 overflow-hidden noise">
-        <div
+      <section ref={sectionRef} className="relative pt-28 md:pt-40 pb-16 md:pb-24 border-b border-outline-variant/25 overflow-hidden noise">
+        {/* Animated shimmer gradient */}
+        <motion.div
           className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              'radial-gradient(ellipse 70% 60% at 25% 40%, rgba(200,169,106,0.08) 0%, transparent 60%)',
+          animate={{
+            background: [
+              'radial-gradient(ellipse 70% 60% at 20% 35%, rgba(200,169,106,0.06) 0%, transparent 60%)',
+              'radial-gradient(ellipse 70% 60% at 30% 45%, rgba(220,140,100,0.1) 0%, transparent 60%)',
+              'radial-gradient(ellipse 70% 60% at 20% 35%, rgba(200,169,106,0.06) 0%, transparent 60%)',
+            ],
+            x: [0, 40, -40, 0],
           }}
+          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
         />
         <div className="container-main relative">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-end">
@@ -124,25 +155,102 @@ export default function About() {
               </p>
             </motion.div>
 
+            {/* Interactive image carousel */}
             <motion.div
-              initial={{ opacity: 0, scale: 1.03 }}
-              whileInView={{ opacity: 1, scale: 1 }}
+              ref={carouselRef}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 1, ease }}
-              className="lg:col-span-6 lg:col-start-7 relative img-zoom overflow-hidden aspect-[4/5] bg-surface-low"
-              style={{ backgroundColor: '#102035' }}
+              className="lg:col-span-6 lg:col-start-7 select-none"
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
             >
-              <img
-                src={getAboutImageUrl(1)}
-                alt="Tunisian coastline"
-                className="w-full h-full object-cover img-mono"
-                loading="lazy"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-bg/40 to-transparent" />
-              <div className="absolute top-6 left-6 w-6 h-6 border-l border-t border-gold/70" />
-              <div className="absolute top-6 right-6 w-6 h-6 border-r border-t border-gold/70" />
-              <div className="absolute bottom-6 left-6 w-6 h-6 border-l border-b border-gold/70" />
-              <div className="absolute bottom-6 right-6 w-6 h-6 border-r border-b border-gold/70" />
+              {/* Main image display */}
+              <div className="relative h-[500px] md:h-[600px] mb-6 group touch-none">
+                {/* Background layers for depth */}
+                {images.map((img, idx) => {
+                  const isActive = idx === currentImage
+                  const offset = (idx - currentImage + images.length) % images.length
+                  const rotation = offset === 0 ? 0 : offset === 1 ? 2 : -3
+                  const yOffset = offset === 0 ? 0 : offset === 1 ? 6 : 12
+
+                  return (
+                    <motion.div
+                      key={img}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: isActive ? 1 : 0.4, zIndex: images.length - offset }}
+                      transition={{ duration: 0.5, ease }}
+                      className="absolute inset-0 rounded-lg overflow-hidden"
+                      style={{
+                        backgroundColor: '#102035',
+                        transform: `rotate(${rotation}deg) translateY(${yOffset}px)`,
+                      }}
+                    >
+                      <img
+                        src={getAboutImageUrl(img)}
+                        alt={`Album image ${img}`}
+                        className={`w-full h-full object-cover ${isActive ? '' : 'img-mono'}`}
+                        loading="lazy"
+                      />
+                      {isActive && <div className="absolute inset-0 bg-gradient-to-t from-bg/40 to-transparent" />}
+                      {/* Corner brackets - only on active */}
+                      {isActive && (
+                        <>
+                          <div className="absolute top-6 left-6 w-6 h-6 border-l border-t border-gold/70" />
+                          <div className="absolute top-6 right-6 w-6 h-6 border-r border-t border-gold/70" />
+                          <div className="absolute bottom-6 left-6 w-6 h-6 border-l border-b border-gold/70" />
+                          <div className="absolute bottom-6 right-6 w-6 h-6 border-r border-b border-gold/70" />
+                        </>
+                      )}
+                    </motion.div>
+                  )
+                })}
+
+                {/* Navigation arrows */}
+                <motion.button
+                  onClick={prevImage}
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.4 }}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-2 bg-gold/10 hover:bg-gold/20 border border-gold/30 hover:border-gold/50 rounded-full transition-all duration-300 text-gold"
+                >
+                  <ChevronLeft size={24} strokeWidth={1.5} />
+                </motion.button>
+
+                <motion.button
+                  onClick={nextImage}
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.4 }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-2 bg-gold/10 hover:bg-gold/20 border border-gold/30 hover:border-gold/50 rounded-full transition-all duration-300 text-gold"
+                >
+                  <ChevronRight size={24} strokeWidth={1.5} />
+                </motion.button>
+              </div>
+
+              {/* Image counter and dots */}
+              <div className="flex items-center justify-between">
+                <span className="text-on-surface-variant text-sm font-light">
+                  {currentImage + 1} / {images.length}
+                </span>
+                <div className="flex gap-2">
+                  {images.map((_, idx) => (
+                    <motion.button
+                      key={idx}
+                      onClick={() => setCurrentImage(idx)}
+                      className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                        idx === currentImage
+                          ? 'bg-gold w-6'
+                          : 'bg-gold/30 hover:bg-gold/50'
+                      }`}
+                      whileHover={{ scale: 1.2 }}
+                    />
+                  ))}
+                </div>
+              </div>
             </motion.div>
           </div>
         </div>

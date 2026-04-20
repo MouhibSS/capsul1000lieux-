@@ -60,6 +60,7 @@ export default function Hero() {
   const imageScale = useTransform(scrollYProgress, [0, 1], [1.02, 1.1])
   const contentY = useTransform(scrollYProgress, [0, 1], ['0%', '-8%'])
   const contentOpacity = useTransform(scrollYProgress, [0, 0.75], [1, 0])
+  const colorShift = useTransform(scrollYProgress, [0, 1], [0, 1])
 
   return (
     <section
@@ -77,27 +78,84 @@ export default function Hero() {
             backgroundImage:
               'url(https://images.unsplash.com/photo-1548263594-a71ea65a8598?w=2400&q=90&auto=format&fit=crop)',
             backgroundColor: '#102035',
-            filter: 'grayscale(100%) brightness(0.48) contrast(1.08)',
+            filter: 'grayscale(55%) brightness(0.55) contrast(1.05)',
           }}
         />
         <div
           className="absolute inset-0"
           style={{
             background:
-              'linear-gradient(180deg, rgba(10,10,10,0.6) 0%, rgba(10,10,10,0.25) 40%, rgba(10,10,10,0.88) 100%)',
+              'linear-gradient(180deg, rgba(10,10,10,0.5) 0%, rgba(10,10,10,0.2) 40%, rgba(10,10,10,0.85) 100%)',
           }}
         />
+        {/* Subtle animated gradient light rays with side-to-side movement */}
+        <motion.div
+          className="absolute inset-0"
+          animate={{
+            background: [
+              'linear-gradient(110deg, rgba(200,150,120,0) 0%, rgba(180,130,100,0.04) 35%, rgba(160,110,90,0.02) 100%)',
+              'linear-gradient(110deg, rgba(200,150,120,0.02) 0%, rgba(180,130,100,0.05) 40%, rgba(160,110,90,0.03) 100%)',
+              'linear-gradient(110deg, rgba(200,150,120,0) 0%, rgba(180,130,100,0.04) 35%, rgba(160,110,90,0.02) 100%)',
+            ],
+            x: [0, 30, -30, 0],
+          }}
+          transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        {/* Subtle warm accent glow with gentle drifting */}
+        <motion.div
+          className="absolute inset-0 pointer-events-none"
+          animate={{
+            background: [
+              'radial-gradient(ellipse 60% 50% at 18% 28%, rgba(200,169,106,0.03) 0%, transparent 60%)',
+              'radial-gradient(ellipse 60% 50% at 26% 36%, rgba(200,140,100,0.05) 0%, transparent 60%)',
+              'radial-gradient(ellipse 60% 50% at 18% 28%, rgba(200,169,106,0.03) 0%, transparent 60%)',
+            ],
+            y: [-20, 20, -20],
+          }}
+          transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        {/* Very subtle warm edge fade */}
         <div
           className="absolute inset-0"
           style={{
             background:
-              'radial-gradient(ellipse 55% 45% at 18% 28%, rgba(200,169,106,0.07) 0%, transparent 70%)',
+              'linear-gradient(135deg, rgba(220,130,90,0.02) 0%, transparent 45%, transparent 55%, rgba(200,90,80,0.01) 100%)',
           }}
         />
       </motion.div>
 
       {/* Technical grid overlay */}
       <div className="absolute inset-0 opacity-[0.10] tech-grid pointer-events-none" />
+
+      {/* Subtle floating accent orbs - visible on all devices */}
+      <motion.div
+        className="absolute top-1/4 right-1/3 w-72 h-72 rounded-full pointer-events-none"
+        animate={{
+          scale: [1, 1.15, 1],
+          opacity: [0.03, 0.05, 0.03],
+          y: [0, -20, 0],
+        }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+        style={{
+          background: 'radial-gradient(circle, rgba(200,130,100,0.08) 0%, transparent 70%)',
+          filter: 'blur(60px)',
+        }}
+      />
+
+      {/* Secondary subtle floating accent */}
+      <motion.div
+        className="absolute bottom-1/4 left-1/4 w-96 h-96 rounded-full pointer-events-none"
+        animate={{
+          scale: [1.1, 1, 1.1],
+          opacity: [0.02, 0.04, 0.02],
+          y: [0, 30, 0],
+        }}
+        transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+        style={{
+          background: 'radial-gradient(circle, rgba(180,130,100,0.06) 0%, transparent 70%)',
+          filter: 'blur(70px)',
+        }}
+      />
 
       {/* Horizontal framing rules */}
       <div className="absolute top-24 left-0 right-0 h-px bg-outline-variant/25 pointer-events-none" />
@@ -192,16 +250,26 @@ export default function Hero() {
             transition={{ duration: 0.9, ease, delay: 0.85 }}
             className="md:col-span-4 md:col-start-9 flex flex-col sm:flex-row gap-3 md:justify-end"
           >
-            <Link to="/explore" className="btn-primary group">
-              {t.exploreButton}
-              <ArrowUpRight
-                className="w-3.5 h-3.5 transition-transform duration-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-                strokeWidth={1.8}
-              />
-            </Link>
-            <Link to="/list-space" className="btn-ghost">
-              List your space
-            </Link>
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.96 }}
+            >
+              <Link to="/explore" className="btn-primary group">
+                {t.exploreButton}
+                <ArrowUpRight
+                  className="w-3.5 h-3.5 transition-transform duration-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                  strokeWidth={1.8}
+                />
+              </Link>
+            </motion.div>
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.96 }}
+            >
+              <Link to="/list-space" className="btn-ghost">
+                List your space
+              </Link>
+            </motion.div>
           </motion.div>
         </div>
 
@@ -218,9 +286,11 @@ export default function Hero() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, ease, delay: 1.1 + i * 0.08 }}
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.98 }}
               className="flex flex-col gap-1"
             >
-              <span className="font-display text-2xl md:text-3xl text-on-surface font-light tabular-nums">
+              <span className="font-display text-2xl md:text-3xl text-gold/80 font-light tabular-nums transition-colors duration-300">
                 {val}
               </span>
               <span className="eyebrow-sm text-on-surface-variant">{label}</span>

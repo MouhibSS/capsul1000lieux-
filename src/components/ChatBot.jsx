@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, X, ChevronLeft, MapPin } from 'lucide-react';
+import { Send, X, ChevronLeft, MapPin, HelpCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 
@@ -383,6 +383,22 @@ export default function ChatBot({ onClose }) {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Support footer */}
+        <div className="border-t border-outline-variant/20 pt-3 mt-3">
+          <motion.button
+            onClick={() => {
+              onClose();
+              navigate('/contact?type=support');
+            }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-on-surface-variant hover:text-gold transition-colors rounded-lg hover:bg-surface-container/40"
+          >
+            <HelpCircle size={16} />
+            <span>Need help? Contact support</span>
+          </motion.button>
+        </div>
       </div>
     </motion.div>
   );

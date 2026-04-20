@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft, Heart, Star, MapPin, Maximize2, Users, Check,
-  ChevronLeft, ChevronRight, Calendar, Share2, ArrowUpRight,
+  ChevronLeft, ChevronRight, Calendar, Share2, ArrowUpRight, X,
   Zap, Home, Bath, Car,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -39,8 +39,18 @@ export default function LocationDetail() {
   const [similar, setSimilar] = useState([])
   const [loading, setLoading] = useState(true)
   const [imgIndex, setImgIndex] = useState(0)
+  const [fullscreenOpen, setFullscreenOpen] = useState(false)
+  const [touchStart, setTouchStart] = useState(null)
   const [bookingDate, setBookingDate] = useState('')
   const [bookingDays, setBookingDays] = useState(1)
+
+  const handleTouchStart = (e) => setTouchStart(e.targetTouches[0].clientX)
+  const handleTouchEnd = (e) => {
+    if (touchStart === null) return
+    const distance = touchStart - e.changedTouches[0].clientX
+    if (distance > 50) setImgIndex((i) => (i + 1) % location.images.length)
+    if (distance < -50) setImgIndex((i) => (i - 1 + location.images.length) % location.images.length)
+  }
 
   useEffect(() => {
     async function fetchLocation() {
@@ -224,8 +234,11 @@ export default function LocationDetail() {
       {/* Gallery — one large + two small */}
       <div className="container-main pt-6 md:pt-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 md:h-[70vh] md:min-h-[480px]">
-          <div className="md:col-span-2 relative overflow-hidden group bg-surface-low h-[60vh] min-h-[320px] md:h-auto md:min-h-0"
-               style={{ backgroundColor: location.fallback || '#1c1b1b' }}>
+          <div className="md:col-span-2 relative overflow-hidden group bg-surface-low h-[60vh] min-h-[320px] md:h-auto md:min-h-0 cursor-pointer"
+               style={{ backgroundColor: location.fallback || '#1c1b1b' }}
+               onClick={() => setFullscreenOpen(true)}
+               onTouchStart={handleTouchStart}
+               onTouchEnd={handleTouchEnd}>
             <motion.img
               key={imgIndex}
               src={location.images[imgIndex]}
@@ -237,19 +250,35 @@ export default function LocationDetail() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-bg/40 via-transparent to-transparent pointer-events-none" />
 
+            {/* Fullscreen button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setFullscreenOpen(true)
+              }}
+              className="absolute top-5 right-5 w-10 h-10 glass flex items-center justify-center text-on-surface hover:text-gold transition-colors opacity-0 group-hover:opacity-100 md:opacity-100"
+              aria-label="Fullscreen"
+            >
+              <Maximize2 className="w-4 h-4" strokeWidth={1.5} />
+            </button>
+
             {location.images.length > 1 && (
               <>
                 <button
-                  onClick={() =>
+                  onClick={(e) => {
+                    e.stopPropagation()
                     setImgIndex((i) => (i - 1 + location.images.length) % location.images.length)
-                  }
+                  }}
                   className="absolute left-5 top-1/2 -translate-y-1/2 w-12 h-12 glass flex items-center justify-center text-on-surface hover:text-gold transition-colors"
                   aria-label="Previous image"
                 >
                   <ChevronLeft className="w-5 h-5" strokeWidth={1.5} />
                 </button>
                 <button
-                  onClick={() => setImgIndex((i) => (i + 1) % location.images.length)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setImgIndex((i) => (i + 1) % location.images.length)
+                  }}
                   className="absolute right-5 top-1/2 -translate-y-1/2 w-12 h-12 glass flex items-center justify-center text-on-surface hover:text-gold transition-colors"
                   aria-label="Next image"
                 >
@@ -268,7 +297,7 @@ export default function LocationDetail() {
               <button
                 key={i}
                 onClick={() => setImgIndex(i + 1)}
-                className="relative overflow-hidden group bg-surface-low h-40 md:h-auto"
+                className="relative overflow-hidden group bg-surface-low h-40 md:h-auto cursor-pointer"
                 style={{ backgroundColor: location.fallback || '#1c1b1b' }}
               >
                 <img
@@ -290,7 +319,7 @@ export default function LocationDetail() {
               <button
                 key={i}
                 onClick={() => setImgIndex(i)}
-                className={`relative w-20 h-14 flex-shrink-0 overflow-hidden transition-all ${
+                className={`relative w-20 h-14 flex-shrink-0 overflow-hidden transition-all cursor-pointer ${
                   i === imgIndex
                     ? 'ring-1 ring-gold'
                     : 'opacity-60 hover:opacity-100'
@@ -302,6 +331,74 @@ export default function LocationDetail() {
           </div>
         )}
       </div>
+
+      {/* Fullscreen image modal */}
+      <AnimatePresence>
+        {fullscreenOpen && location && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center"
+            onClick={() => setFullscreenOpen(false)}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setFullscreenOpen(false)}
+              className="absolute top-4 md:top-6 right-4 md:right-6 p-2 text-white hover:text-gold transition-colors z-10"
+              aria-label="Close fullscreen"
+            >
+              <X className="w-6 h-6 md:w-8 md:h-8" strokeWidth={1.5} />
+            </button>
+
+            {/* Main image */}
+            <motion.img
+              key={`fullscreen-${imgIndex}`}
+              src={location.images[imgIndex]}
+              alt={location.name}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.3 }}
+              className="w-full h-full object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+
+            {/* Navigation arrows */}
+            {location.images.length > 1 && (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setImgIndex((i) => (i - 1 + location.images.length) % location.images.length)
+                  }}
+                  className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 p-2 md:p-3 text-white hover:text-gold transition-colors"
+                  aria-label="Previous image"
+                >
+                  <ChevronLeft className="w-6 h-6 md:w-8 md:h-8" strokeWidth={1.5} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setImgIndex((i) => (i + 1) % location.images.length)
+                  }}
+                  className="absolute right-4 md:right-6 top-1/2 -translate-y-1/2 p-2 md:p-3 text-white hover:text-gold transition-colors"
+                  aria-label="Next image"
+                >
+                  <ChevronRight className="w-6 h-6 md:w-8 md:h-8" strokeWidth={1.5} />
+                </button>
+              </>
+            )}
+
+            {/* Image counter */}
+            <div className="absolute bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 font-mono text-sm text-white bg-black/50 backdrop-blur px-4 py-2 rounded">
+              {String(imgIndex + 1).padStart(2, '0')} / {String(location.images.length).padStart(2, '0')}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main content — two-col with sticky booking */}
       <div className="container-main py-14 md:py-20 lg:py-28">

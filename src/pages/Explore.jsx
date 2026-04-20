@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, useScroll, useTransform } from 'framer-motion'
 import { X, Grid3X3, LayoutList, ChevronDown } from 'lucide-react'
 import { locationTypes, cities } from '../data/locations'
 import { useLocations } from '../hooks/useLocations'
@@ -43,11 +43,27 @@ export default function Explore() {
     return result
   }, [locations, type, city, sort])
 
+  const headerRef = useRef(null)
+  const { scrollYProgress } = useScroll({ target: headerRef, offset: ['start center', 'end center'] })
+
   return (
     <motion.div variants={pageVariants} initial="initial" animate="enter" exit="exit" className="min-h-screen bg-bg">
       {/* Editorial header */}
-      <section className="pt-28 md:pt-36 pb-12 md:pb-16 border-b border-outline-variant/25 noise">
-        <div className="container-main">
+      <section ref={headerRef} className="relative pt-28 md:pt-36 pb-12 md:pb-16 border-b border-outline-variant/25 noise overflow-hidden">
+        {/* Animated shimmer gradient */}
+        <motion.div
+          className="absolute inset-0 pointer-events-none"
+          animate={{
+            background: [
+              'radial-gradient(ellipse 70% 60% at 20% 35%, rgba(200,169,106,0.06) 0%, transparent 60%)',
+              'radial-gradient(ellipse 70% 60% at 30% 45%, rgba(220,140,100,0.1) 0%, transparent 60%)',
+              'radial-gradient(ellipse 70% 60% at 20% 35%, rgba(200,169,106,0.06) 0%, transparent 60%)',
+            ],
+            x: [0, 40, -40, 0],
+          }}
+          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <div className="container-main relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-10 items-end">
             <div className="lg:col-span-8">
               <motion.div
