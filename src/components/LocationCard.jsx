@@ -28,13 +28,15 @@ export default function LocationCard({ location, index = 0 }) {
           {!imgLoaded && (
             <div className="absolute inset-0 animate-pulse" style={{ backgroundColor: location.fallback || '#1c1b1b' }} />
           )}
-          <img
-            src={location.images[0]}
-            alt={location.name}
-            loading="lazy"
-            onLoad={() => setImgLoaded(true)}
-            className={`w-full h-full object-cover img-mono transition-opacity duration-700 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
-          />
+          {location.images && location.images[0] && (
+            <img
+              src={location.images[0]}
+              alt={location.name}
+              loading="lazy"
+              onLoad={() => setImgLoaded(true)}
+              className={`w-full h-full object-cover img-mono transition-opacity duration-700 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+            />
+          )}
 
           {/* Index overlay */}
           <div className="absolute top-4 left-4 font-mono eyebrow-sm text-on-surface/80">
@@ -85,7 +87,7 @@ export default function LocationCard({ location, index = 0 }) {
 
           <div className="flex items-center justify-between pt-4 border-t border-outline-variant/25">
             <div className="flex flex-wrap gap-1.5">
-              {location.tags.slice(0, 2).map((t) => (
+              {location.tags && location.tags.slice(0, 2).map((t) => (
                 <span key={t} className="text-[9px] tracking-[0.25em] uppercase text-on-surface-variant">
                   {t}
                 </span>

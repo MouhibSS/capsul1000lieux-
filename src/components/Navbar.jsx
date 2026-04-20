@@ -1,17 +1,21 @@
 import { useState, useEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Heart, Menu, X } from 'lucide-react'
+import { Heart, Menu, X, LogOut } from 'lucide-react'
 import { useFavorites } from '../hooks/useFavorites'
 import { useLanguage, useTranslation } from '../context/LanguageContext'
+import { useAuthContext } from '../context/AuthContext'
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [authMenuOpen, setAuthMenuOpen] = useState(false)
   const { favorites } = useFavorites()
   const { lang, choose } = useLanguage()
   const t = useTranslation('nav')
   const location = useLocation()
+  const navigate = useNavigate()
+  const { user, logout } = useAuthContext()
 
   const links = [
     { href: '/explore', label: t.explore || 'Explore' },
@@ -91,7 +95,7 @@ export default function Navbar() {
 
           <div className="hidden md:flex items-center gap-5">
             <Link
-              to="/explore"
+              to="/favorites"
               className="relative p-2 text-on-surface-variant hover:text-gold transition-colors"
               aria-label="Favorites"
             >
@@ -102,6 +106,43 @@ export default function Navbar() {
                 </span>
               )}
             </Link>
+            {user ? (
+              <div className="relative">
+                <button
+                  onClick={() => setAuthMenuOpen(!authMenuOpen)}
+                  className="w-8 h-8 rounded-full bg-gold text-bg flex items-center justify-center font-semibold text-sm hover:bg-gold-light transition-colors"
+                  aria-label="User menu"
+                >
+                  {user.email?.[0].toUpperCase() || 'U'}
+                </button>
+                {authMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="absolute right-0 mt-2 bg-surface-low border border-outline-variant/40 rounded shadow-lg min-w-[180px] z-50"
+                  >
+                    <button
+                      onClick={async () => {
+                        await logout()
+                        setAuthMenuOpen(false)
+                      }}
+                      className="w-full text-left px-4 py-3 text-sm text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2"
+                    >
+                      <LogOut className="w-4 h-4" strokeWidth={1.5} />
+                      Logout
+                    </button>
+                  </motion.div>
+                )}
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="text-[10px] font-medium tracking-[0.35em] uppercase text-on-surface hover:text-gold transition-colors"
+              >
+                Login
+              </Link>
+            )}
             <Link to="/list-space" className="btn-primary py-3 px-6">
               List your space
             </Link>
@@ -151,12 +192,32 @@ export default function Navbar() {
                 List your space
               </Link>
               <Link
-                to="/explore"
+                to="/favorites"
                 className="inline-flex items-center gap-3 text-on-surface-variant hover:text-gold text-[10px] tracking-[0.35em] uppercase transition-colors"
               >
                 <Heart className="w-3.5 h-3.5" strokeWidth={1.5} />
                 Favorites {favorites.length > 0 && `(${favorites.length})`}
               </Link>
+              {user ? (
+                <button
+                  onClick={async () => {
+                    await logout()
+                    setMenuOpen(false)
+                  }}
+                  className="inline-flex items-center gap-3 text-on-surface hover:text-gold text-[10px] tracking-[0.35em] uppercase transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  Logout
+                </button>
+              ) : (
+                <Link
+                  to="/login"
+                  onClick={() => setMenuOpen(false)}
+                  className="inline-flex items-center gap-3 text-on-surface hover:text-gold text-[10px] tracking-[0.35em] uppercase transition-colors"
+                >
+                  Login
+                </Link>
+              )}
               <div className="text-[10px] font-medium tracking-[0.35em] uppercase flex items-center gap-4 text-on-surface-variant pt-4 border-t border-outline-variant/25">
                 <button
                   onClick={() => choose('en')}

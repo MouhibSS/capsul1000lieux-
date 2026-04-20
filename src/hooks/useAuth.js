@@ -32,5 +32,11 @@ export function useAuth() {
     if (error) throw error
   }
 
-  return { user, loading, login, logout }
+  const signUp = async (email, password) => {
+    const { data, error } = await supabase.auth.signUp({ email, password })
+    if (error) throw error
+    return data
+  }
+
+  return { user, loading, login, logout, signUp }
 }

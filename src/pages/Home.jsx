@@ -78,7 +78,7 @@ export default function Home() {
       </div>
 
       {/* ── Search ──────────────────────────────────────────────── */}
-      <section className="py-14 md:py-20 border-b border-outline-variant/25 overflow-hidden">
+      <section className="py-14 md:py-20 border-b border-outline-variant/25">
         <div className="container-main">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12 mb-8 md:mb-10 items-center">
             <div className="lg:col-span-7">

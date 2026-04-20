@@ -21,7 +21,7 @@
   --c-gold:              200 169 106;
   --c-gold-light:        229 196 131;
   --c-gold-dark:         168 139 74;
-  --c-stroke-text:       rgba(229,226,225,0.18);
+  --c-stroke-text:       rgba(229,226,225,0.4);
   --c-bg-hex:            #0A0A0A;
   --c-on-surface-hex:    #E5E2E1;
 }
@@ -121,8 +121,8 @@
   /* Outlined / stroke display headings */
   .stroke-text {
     color: transparent;
-    -webkit-text-stroke: 1px var(--c-stroke-text);
-    text-stroke: 1px var(--c-stroke-text);
+    -webkit-text-stroke: 1.3px var(--c-stroke-text);
+    text-stroke: 1.3px var(--c-stroke-text);
   }
   .stroke-gold {
     color: transparent;
