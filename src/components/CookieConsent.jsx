@@ -68,7 +68,7 @@ export default function CookieConsent() {
 
             <div className="px-5 pt-4 pb-5">
               <p className="text-on-surface-variant text-[11px] font-light leading-relaxed mb-4">
-                We use cookies to deliver a seamless experience and understand how Capsul is used. Manage your preferences or accept all to continue.
+                We use cookies to deliver a seamless experience and understand how 216 000 lieux is used. Manage your preferences or accept all to continue.
               </p>
 
               {/* Manage panel */}

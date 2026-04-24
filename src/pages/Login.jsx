@@ -22,7 +22,8 @@ export default function Login() {
   const [error, setError] = useState('')
 
   const pendingFavoriteId = location.state?.pendingFavoriteId
-  const from = location.state?.from?.pathname || '/favorites'
+  const pendingBooking = location.state?.pendingBooking
+  const from = location.state?.from?.pathname || '/'
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -30,13 +31,19 @@ export default function Login() {
     setLoading(true)
 
     try {
-      await login(email, password)
-      // Store pending favorite in sessionStorage so it persists across navigation
-      if (pendingFavoriteId) {
-        sessionStorage.setItem('pendingFavoriteId', pendingFavoriteId)
+      const { user: loggedInUser } = await login(email, password)
+      if (pendingFavoriteId) sessionStorage.setItem('pendingFavoriteId', pendingFavoriteId)
+      if (pendingBooking && from && !from.includes('/login')) {
+        sessionStorage.setItem('pendingBooking', '1')
+        navigate(from, { state: { bookingFlow: true } })
+        return
       }
-      // If user came from a favorite action, go to favorites; otherwise go to the original location
-      const redirectTo = from.includes('/login') ? '/favorites' : from
+      const isAdmin = loggedInUser?.user_metadata?.user_role === 'admin'
+      if (isAdmin && (from === '/' || from.includes('/login'))) {
+        navigate('/dashboard')
+        return
+      }
+      const redirectTo = from.includes('/login') ? '/' : from
       navigate(redirectTo)
     } catch (err) {
       setError(err.message || 'Login failed')
@@ -116,6 +123,7 @@ export default function Login() {
 
           <Link
             to="/signup"
+            state={{ from: location.state?.from, pendingBooking, pendingFavoriteId }}
             className="block w-full border border-outline-variant/40 hover:border-gold text-center px-6 py-3 rounded font-medium text-sm uppercase tracking-wide text-on-surface hover:text-gold transition-colors"
           >
             Create new account

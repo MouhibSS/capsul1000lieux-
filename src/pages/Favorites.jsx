@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useAuthContext } from '../context/AuthContext'
+import { useFavoritesContext as useFavorites } from '../context/FavoritesContext'
 import { supabase } from '../lib/supabase'
 import LocationCard from '../components/LocationCard'
-import { ArrowUpRight } from 'lucide-react'
+import { ArrowUpRight, X } from 'lucide-react'
 
 const ease = [0.22, 1, 0.36, 1]
 
@@ -17,6 +18,12 @@ const pageVariants = {
 export default function Favorites() {
   const navigate = useNavigate()
   const { user, loading: authLoading } = useAuthContext()
+  const { toggle } = useFavorites()
+
+  const handleRemove = async (id) => {
+    await toggle(id)
+    setLocations(prev => prev.filter(l => l.id !== id))
+  }
   const [locations, setLocations] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -161,8 +168,17 @@ export default function Favorites() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05, duration: 0.5 }}
+              className="relative group"
             >
               <LocationCard location={location} />
+              <button
+                onClick={() => handleRemove(location.id)}
+                className="absolute top-4 right-4 w-10 h-10 bg-red-500/90 text-white flex items-center justify-center rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600"
+                aria-label="Remove from favorites"
+                title="Remove from favorites"
+              >
+                <X className="w-4 h-4" strokeWidth={2} />
+              </button>
             </motion.div>
           ))}
         </div>

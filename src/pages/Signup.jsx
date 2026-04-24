@@ -25,7 +25,9 @@ export default function Signup() {
   const [success, setSuccess] = useState(false)
   const [resending, setResending] = useState(false)
 
-  const from = location.state?.from?.pathname || '/favorites'
+  const from = location.state?.from?.pathname || '/'
+  const pendingBooking = location.state?.pendingBooking
+  const pendingFavoriteId = location.state?.pendingFavoriteId
 
   const resendEmail = async () => {
     setResending(true)
@@ -66,7 +68,7 @@ export default function Signup() {
       setEmail('')
       setPassword('')
       setConfirmPassword('')
-      setTimeout(() => navigate('/login'), 2000)
+      setTimeout(() => navigate('/login', { state: { from: location.state?.from, pendingBooking, pendingFavoriteId } }), 2000)
     } catch (err) {
       setError(err.message || 'Signup failed')
     } finally {
@@ -105,7 +107,7 @@ export default function Signup() {
                   </div>
                 </motion.div>
                 <h2 className="font-display text-2xl font-light text-on-surface mb-3">
-                  Welcome to Capsul!
+                  Welcome to 216 000 lieux!
                 </h2>
                 <p className="text-on-surface-variant text-sm leading-relaxed mb-6">
                   A verification email has been sent to
@@ -139,6 +141,7 @@ export default function Signup() {
                 </p>
                 <Link
                   to="/login"
+                  state={{ from: location.state?.from, pendingBooking, pendingFavoriteId }}
                   className="inline-flex items-center gap-2 text-gold hover:text-gold-light font-medium text-sm uppercase tracking-wide transition-colors"
                 >
                   Go to login

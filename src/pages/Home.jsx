@@ -9,6 +9,7 @@ import FeaturedCarousel from '../components/FeaturedCarousel'
 import TrendingSection from '../components/TrendingSection'
 import StatsSection from '../components/StatsSection'
 import SearchBar from '../components/SearchBar'
+import SignatureEmblem from '../components/SignatureEmblem'
 
 const ease = [0.22, 1, 0.36, 1]
 
@@ -76,6 +77,9 @@ export default function Home() {
           ))}
         </div>
       </div>
+
+      {/* ── Signature Emblem — 3D interactive centerpiece ────────── */}
+      <SignatureEmblem />
 
       {/* ── Search ──────────────────────────────────────────────── */}
       <section className="py-14 md:py-20 border-b border-outline-variant/25">
@@ -231,7 +235,7 @@ export default function Home() {
 
       <StatsSection />
 
-      {/* ── Values — Capsul standard ─────────────────────────────── */}
+      {/* ── Values — 216 000 lieux standard ─────────────────────────────── */}
       <section className="relative py-16 md:py-24 lg:py-28 border-t border-outline-variant/25 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <img

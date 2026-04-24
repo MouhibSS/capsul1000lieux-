@@ -24,7 +24,7 @@ export default function LanguageModal() {
         >
           <div>
             <h1 className="font-display font-light text-6xl md:text-7xl text-on-surface uppercase tracking-display mb-3">
-              Capsul
+              216 000 lieux
             </h1>
             <p className="text-on-surface-variant font-light text-lg">
               Choose your language

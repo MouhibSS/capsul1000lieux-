@@ -1,4 +1,4 @@
-// Capsul1000lieux — Tunisia-exclusive location index.
+// 216 000 lieux — Tunisia-exclusive location index.
 // When the Supabase migration lands (planned 2026-04-19), swap `images` for
 // Storage CDN URLs and drop the fallbacks.
 
@@ -335,6 +335,95 @@ export const locations = [
   },
 ]
 
+// Legacy flat types (for backward compatibility)
 export const locationTypes = ['All', 'Loft', 'Villa', 'Studio', 'Rooftop', 'Mansion', 'Penthouse', 'Industrial']
 
 export const cities = ['All Cities', 'Tunis', 'Sidi Bou Said', 'La Marsa', 'Hammamet', 'Sousse', 'Djerba', 'Tozeur', 'Kairouan', 'Tataouine', 'Matmata', 'Carthage', 'Nabeul']
+
+// Hierarchical filter categories (Phase 3)
+export const filterCategories = {
+  placeType: {
+    label: 'Par type de lieux',
+    children: {
+      residential: {
+        label: 'Résidentiel',
+        children: {
+          house: { label: 'Maison' },
+          villa: { label: 'Villa' },
+          penthouse: { label: 'Penthouse' },
+          loft: { label: 'Loft' },
+        },
+      },
+      commerce: {
+        label: 'Commerces',
+        children: {
+          food: {
+            label: 'Alimentation',
+            children: {
+              butcher: { label: 'Boucherie' },
+              supermarket: { label: 'Supermarché' },
+            },
+          },
+          clothing: {
+            label: 'Vêtements',
+            children: {
+              vintage: { label: 'Friperie' },
+              boutique: { label: 'Boutique' },
+            },
+          },
+        },
+      },
+      offices: {
+        label: 'Bureaux',
+        children: {
+          openspace: { label: 'Open space' },
+          office: { label: 'Bureaux' },
+        },
+      },
+      health: {
+        label: 'Santé',
+        children: {
+          doctor: { label: 'Médecin' },
+          dentist: { label: 'Dentiste' },
+          pharmacy: { label: 'Pharmacie' },
+        },
+      },
+      culture: {
+        label: 'Culture',
+        children: {
+          nightclub: { label: 'Boîte de nuit' },
+          theater: { label: 'Salle spectacle' },
+        },
+      },
+      studio: {
+        label: 'Studio',
+        children: {
+          photo: { label: 'Photo' },
+          video: { label: 'Vidéo' },
+          greenscreen: { label: 'Fond vert' },
+          opensky: { label: 'Ciel ouvert' },
+        },
+      },
+      nature: {
+        label: 'Naturel',
+        children: {
+          farm: { label: 'Ferme' },
+          beach: { label: 'Plage privée' },
+          lake: { label: 'Lac' },
+          village: { label: 'Village' },
+        },
+      },
+    },
+  },
+  architecture: {
+    label: 'Par architecture',
+    children: {
+      tunisian: { label: 'Tunisienne' },
+      colonial: { label: 'Colonial' },
+      mediterranean: { label: 'Méditerranéen' },
+      brutalist: { label: 'Brutaliste' },
+      industrial: { label: 'Industrielle' },
+      seventies: { label: 'Années 70-80' },
+    },
+  },
+}

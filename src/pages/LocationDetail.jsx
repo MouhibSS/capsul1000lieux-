@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft, Heart, Star, MapPin, Maximize2, Users, Check,
@@ -7,9 +7,13 @@ import {
   Zap, Home, Bath, Car,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { useFavorites } from '../hooks/useFavorites'
+import { useAuthContext } from '../context/AuthContext'
+import { useFavoritesContext as useFavorites } from '../context/FavoritesContext'
+import { useProfile } from '../hooks/useProfile'
 import LocationCard from '../components/LocationCard'
 import LocationMap from '../components/LocationMap'
+import ProfileCompletionModal from '../components/ProfileCompletionModal'
+import BookingModal from '../components/BookingModal'
 
 const ease = [0.22, 1, 0.36, 1]
 
@@ -34,7 +38,10 @@ function SpecRow({ icon: Icon, label, value }) {
 export default function LocationDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const routerLocation = useLocation()
+  const { user, loading: authLoading } = useAuthContext()
   const { toggle, isFavorite } = useFavorites()
+  const { profile, isProfileComplete } = useProfile()
   const [location, setLocation] = useState(null)
   const [similar, setSimilar] = useState([])
   const [loading, setLoading] = useState(true)
@@ -43,6 +50,9 @@ export default function LocationDetail() {
   const [touchStart, setTouchStart] = useState(null)
   const [bookingDate, setBookingDate] = useState('')
   const [bookingDays, setBookingDays] = useState(1)
+  const [profileModalOpen, setProfileModalOpen] = useState(false)
+  const [bookingModalOpen, setBookingModalOpen] = useState(false)
+  const [successBanner, setSuccessBanner] = useState(null)
 
   const handleTouchStart = (e) => setTouchStart(e.targetTouches[0].clientX)
   const handleTouchEnd = (e) => {
@@ -51,6 +61,45 @@ export default function LocationDetail() {
     if (distance > 50) setImgIndex((i) => (i + 1) % location.images.length)
     if (distance < -50) setImgIndex((i) => (i - 1 + location.images.length) % location.images.length)
   }
+
+  const handleBookNow = () => {
+    if (!user) {
+      navigate('/login', {
+        state: {
+          from: { pathname: `/location/${id}` },
+          pendingBooking: true,
+        },
+      })
+      return
+    }
+
+    if (!isProfileComplete()) {
+      setProfileModalOpen(true)
+      return
+    }
+
+    setBookingModalOpen(true)
+  }
+
+  // Handle post-login/post-profile booking flow continuation
+  useEffect(() => {
+    if (authLoading || !user || !location) return
+
+    const justReturned = routerLocation.state?.bookingFlow || sessionStorage.getItem('pendingBooking') === '1'
+    if (!justReturned) return
+
+    sessionStorage.removeItem('pendingBooking')
+    window.history.replaceState({}, document.title, window.location.pathname)
+
+    if (!isProfileComplete()) {
+      setSuccessBanner('Welcome! Complete your profile to finish your booking.')
+      setProfileModalOpen(true)
+    } else {
+      setSuccessBanner('You\'re all set — pick your dates below to book.')
+      setBookingModalOpen(true)
+    }
+    setTimeout(() => setSuccessBanner(null), 6000)
+  }, [authLoading, user, location, routerLocation.state, isProfileComplete])
 
   useEffect(() => {
     async function fetchLocation() {
@@ -133,6 +182,26 @@ export default function LocationDetail() {
       exit="exit"
       className="min-h-screen bg-bg"
     >
+      {/* Success banner */}
+      <AnimatePresence>
+        {successBanner && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-24 left-1/2 -translate-x-1/2 z-50 max-w-md w-[calc(100%-2rem)]"
+          >
+            <div className="bg-gold text-bg px-5 py-3 rounded-lg shadow-xl flex items-center gap-3">
+              <Check className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
+              <p className="text-sm font-medium flex-1">{successBanner}</p>
+              <button onClick={() => setSuccessBanner(null)} className="flex-shrink-0 hover:opacity-70 transition-opacity">
+                <X className="w-4 h-4" strokeWidth={2} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Breadcrumb + top actions */}
       <div className="container-main pt-24 md:pt-28 pb-4 md:pb-6 flex items-center justify-between gap-4">
         <button
@@ -144,7 +213,7 @@ export default function LocationDetail() {
           <span>Back</span>
         </button>
         <div className="hidden md:flex items-center gap-6 eyebrow-sm text-on-surface-variant">
-          <span>Capsul</span>
+          <span>216 000 lieux</span>
           <span className="w-1 h-1 rounded-full bg-outline-variant" />
           <span>{location.type}</span>
           <span className="w-1 h-1 rounded-full bg-outline-variant" />
@@ -576,7 +645,7 @@ export default function LocationDetail() {
                 </div>
 
                 <div className="p-5 md:p-7 pt-0">
-                  <button className="btn-primary w-full">
+                  <button onClick={handleBookNow} className="btn-primary w-full">
                     <Calendar className="w-3.5 h-3.5" strokeWidth={1.8} />
                     Request Booking
                   </button>
@@ -634,6 +703,21 @@ export default function LocationDetail() {
           </div>
         </section>
       )}
+
+      {/* Modals */}
+      <ProfileCompletionModal
+        isOpen={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        onComplete={() => {
+          setProfileModalOpen(false)
+          setBookingModalOpen(true)
+        }}
+      />
+      <BookingModal
+        isOpen={bookingModalOpen}
+        onClose={() => setBookingModalOpen(false)}
+        location={location}
+      />
     </motion.div>
   )
 }

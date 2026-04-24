@@ -1,25 +1,31 @@
 import { useState, useEffect } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Heart, Menu, X, LogOut } from 'lucide-react'
-import { useFavorites } from '../hooks/useFavorites'
+import { Heart, Menu, X, LogOut, Bell, UserCog, LayoutDashboard, Calendar } from 'lucide-react'
+import { useFavoritesContext as useFavorites } from '../context/FavoritesContext'
 import { useLanguage, useTranslation } from '../context/LanguageContext'
 import { useAuthContext } from '../context/AuthContext'
+import { useProfile } from '../hooks/useProfile'
+import ProfileCompletionModal from './ProfileCompletionModal'
+
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [authMenuOpen, setAuthMenuOpen] = useState(false)
+  const [profileModalOpen, setProfileModalOpen] = useState(false)
   const { favorites } = useFavorites()
+  const { isProfileComplete } = useProfile()
   const { lang, choose } = useLanguage()
   const t = useTranslation('nav')
   const location = useLocation()
-  const navigate = useNavigate()
   const { user, logout } = useAuthContext()
+
+  const { isAdmin } = useAuthContext()
 
   const links = [
     { href: '/explore', label: t.explore || 'Explore' },
-    { href: '/about', label: 'Studio' },
+    { href: '/about', label: t.about || 'About / Team' },
     { href: '/contact', label: t.contact || 'Contact' },
   ]
 
@@ -47,7 +53,7 @@ export default function Navbar() {
           <Link to="/" className="flex items-center gap-3 group">
             <span className="w-1.5 h-1.5 rounded-full bg-gold" />
             <span className="font-display text-xl font-medium tracking-[0.35em] text-on-surface group-hover:text-gold transition-colors duration-300 uppercase">
-              Capsul
+              216 000 lieux
             </span>
             <span className="hidden md:inline text-on-surface-variant/50 eyebrow-sm ml-2">
               Tunisia
@@ -99,7 +105,12 @@ export default function Navbar() {
               className="relative p-2 text-on-surface-variant hover:text-gold transition-colors"
               aria-label="Favorites"
             >
-              <Heart className="w-4 h-4" strokeWidth={1.5} />
+              <motion.div
+                animate={favorites.length > 0 ? { scale: [1, 1.22, 1] } : { scale: 1 }}
+                transition={favorites.length > 0 ? { duration: 1.8, repeat: Infinity, ease: 'easeInOut' } : {}}
+              >
+                <Heart className={`w-4 h-4 transition-colors ${favorites.length > 0 ? 'text-gold fill-gold/25' : ''}`} strokeWidth={1.5} />
+              </motion.div>
               {favorites.length > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-gold text-bg text-[9px] font-semibold flex items-center justify-center">
                   {favorites.length}
@@ -107,33 +118,93 @@ export default function Navbar() {
               )}
             </Link>
             {user ? (
-              <div className="relative">
-                <button
-                  onClick={() => setAuthMenuOpen(!authMenuOpen)}
-                  className="w-8 h-8 rounded-full bg-gold text-bg flex items-center justify-center font-semibold text-sm hover:bg-gold-light transition-colors"
-                  aria-label="User menu"
-                >
-                  {user.email?.[0].toUpperCase() || 'U'}
-                </button>
-                {authMenuOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    className="absolute right-0 mt-2 bg-surface-low border border-outline-variant/40 rounded shadow-lg min-w-[180px] z-50"
+              <div className="flex items-center gap-3">
+                {!isProfileComplete() && (
+                  <button
+                    onClick={() => setProfileModalOpen(true)}
+                    className="relative p-2 text-on-surface-variant hover:text-gold transition-colors group"
+                    aria-label="Complete your profile"
+                    title="Complete your profile to book"
                   >
-                    <button
-                      onClick={async () => {
-                        await logout()
-                        setAuthMenuOpen(false)
-                      }}
-                      className="w-full text-left px-4 py-3 text-sm text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2"
-                    >
-                      <LogOut className="w-4 h-4" strokeWidth={1.5} />
-                      Logout
-                    </button>
-                  </motion.div>
+                    <Bell className="w-4 h-4" strokeWidth={1.5} />
+                    <motion.span
+                      animate={{ scale: [1, 1.5, 1], opacity: [0.8, 0, 0.8] }}
+                      transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut' }}
+                      className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-gold"
+                    />
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-gold" />
+                    <span className="absolute top-full right-0 mt-2 px-2.5 py-1.5 text-[10px] font-medium text-on-surface bg-surface-container border border-outline-variant/40 rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap uppercase tracking-wider">
+                      Complete profile
+                    </span>
+                  </button>
                 )}
+                <div className="relative">
+                  <button
+                    onClick={() => setAuthMenuOpen(!authMenuOpen)}
+                    className="w-8 h-8 rounded-full bg-gold text-bg flex items-center justify-center font-semibold text-sm hover:bg-gold-light transition-colors"
+                    aria-label="User menu"
+                  >
+                    {user.email?.[0].toUpperCase() || 'U'}
+                  </button>
+                  <AnimatePresence>
+                    {authMenuOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        className="absolute right-0 mt-2 bg-surface-low border border-outline-variant/40 rounded-lg shadow-xl min-w-[220px] z-50 overflow-hidden"
+                      >
+                        <div className="px-4 py-3 border-b border-outline-variant/25">
+                          <p className="text-[10px] text-on-surface-variant uppercase tracking-wider">Signed in as</p>
+                          <p className="text-sm text-on-surface truncate">{user.email}</p>
+                        </div>
+                        {!isProfileComplete() && (
+                          <button
+                            onClick={() => { setProfileModalOpen(true); setAuthMenuOpen(false) }}
+                            className="w-full text-left px-4 py-3 text-sm text-gold hover:bg-gold/10 transition-colors flex items-center gap-2 border-b border-outline-variant/25"
+                          >
+                            <UserCog className="w-4 h-4" strokeWidth={1.5} />
+                            Complete profile
+                            <span className="ml-auto w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
+                          </button>
+                        )}
+                        <Link
+                          to="/bookings"
+                          onClick={() => setAuthMenuOpen(false)}
+                          className="w-full text-left px-4 py-3 text-sm text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2"
+                        >
+                          <Calendar className="w-4 h-4" strokeWidth={1.5} />
+                          My Bookings
+                        </Link>
+                        <Link
+                          to="/favorites"
+                          onClick={() => setAuthMenuOpen(false)}
+                          className="w-full text-left px-4 py-3 text-sm text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2"
+                        >
+                          <Heart className="w-4 h-4" strokeWidth={1.5} />
+                          Favorites {favorites.length > 0 && <span className="ml-auto text-xs text-on-surface-variant">{favorites.length}</span>}
+                        </Link>
+                        {isAdmin && (
+                          <Link
+                            to="/dashboard"
+                            onClick={() => setAuthMenuOpen(false)}
+                            className="w-full text-left px-4 py-3 text-sm text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2 border-t border-outline-variant/25"
+                          >
+                            <LayoutDashboard className="w-4 h-4" strokeWidth={1.5} />
+                            Dashboard
+                          </Link>
+                        )}
+                        <button
+                          onClick={async () => { await logout(); setAuthMenuOpen(false) }}
+                          className="w-full text-left px-4 py-3 text-sm text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2 border-t border-outline-variant/25"
+                        >
+                          <LogOut className="w-4 h-4" strokeWidth={1.5} />
+                          Logout
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             ) : (
               <Link
@@ -198,6 +269,16 @@ export default function Navbar() {
                 <Heart className="w-3.5 h-3.5" strokeWidth={1.5} />
                 Favorites {favorites.length > 0 && `(${favorites.length})`}
               </Link>
+              {user && !isProfileComplete() && (
+                <button
+                  onClick={() => { setProfileModalOpen(true); setMenuOpen(false) }}
+                  className="inline-flex items-center gap-3 text-gold hover:text-gold-light text-[10px] tracking-[0.35em] uppercase transition-colors"
+                >
+                  <UserCog className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  Complete profile
+                  <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
+                </button>
+              )}
               {user ? (
                 <button
                   onClick={async () => {
@@ -237,6 +318,12 @@ export default function Navbar() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ProfileCompletionModal
+        isOpen={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        onComplete={() => setProfileModalOpen(false)}
+      />
     </>
   )
 }

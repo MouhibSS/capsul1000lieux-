@@ -60,7 +60,7 @@ export default function ListSpace() {
             <span className="text-gold-gradient italic">listed.</span>
           </h1>
           <p className="text-on-surface-variant text-base font-light leading-relaxed mb-10">
-            A Capsul scout will review your space and schedule a visit within
+            A 216 000 lieux scout will review your space and schedule a visit within
             48 hours. Welcome to the index.
           </p>
           <Link to="/" className="btn-primary">

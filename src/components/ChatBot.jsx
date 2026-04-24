@@ -114,7 +114,7 @@ export default function ChatBot({ onClose }) {
       {/* Header */}
       <div className="flex justify-between items-center px-4 sm:px-5 py-3 sm:py-4 border-b border-outline-variant/20 flex-shrink-0">
         <h2 className="font-display text-xs sm:text-sm font-medium tracking-[0.25em] text-gold uppercase">
-          Capsul Search
+          216 000 lieux Search
         </h2>
         <button
           onClick={onClose}
@@ -139,7 +139,7 @@ export default function ChatBot({ onClose }) {
               <div className="space-y-4">
                 <div className="bg-gold/15 border border-gold/30 rounded-lg p-3 sm:p-4">
                   <p className="text-on-surface font-medium mb-2 text-sm sm:text-base">
-                    👋 Hello! I'm your Capsul Assistant
+                    👋 Hello! I'm your 216 000 lieux Assistant
                   </p>
                   <p className="text-on-surface-variant text-xs sm:text-sm">
                     I'll help you find the perfect rental location in Tunisia. Let me show you what's available!

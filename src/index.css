@@ -51,6 +51,22 @@
     cursor: none;
   }
 
+  body:has(.dashboard-root), body.dashboard-active {
+    cursor: auto;
+  }
+  body:has(.dashboard-root) *, body.dashboard-active * {
+    cursor: auto;
+  }
+  body:has(.dashboard-root) a, body.dashboard-active a,
+  body:has(.dashboard-root) button, body.dashboard-active button,
+  body:has(.dashboard-root) [role="button"], body.dashboard-active [role="button"] {
+    cursor: pointer;
+  }
+  body:has(.dashboard-root) input, body.dashboard-active input,
+  body:has(.dashboard-root) textarea, body.dashboard-active textarea {
+    cursor: text;
+  }
+
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: rgb(var(--c-surface-lowest)); }
   ::-webkit-scrollbar-thumb { background: rgb(var(--c-surface-highest)); border-radius: 0; }

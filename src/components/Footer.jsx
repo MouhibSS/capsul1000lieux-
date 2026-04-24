@@ -73,7 +73,7 @@ export default function Footer() {
           <Link to="/" className="inline-flex items-center gap-3 mb-5">
             <span className="w-1.5 h-1.5 rounded-full bg-gold" />
             <span className="font-display text-lg font-medium tracking-[0.35em] text-on-surface uppercase">
-              Capsul
+              216 000 lieux
             </span>
           </Link>
           <p className="text-on-surface-variant text-sm leading-relaxed max-w-xs font-light mb-6">

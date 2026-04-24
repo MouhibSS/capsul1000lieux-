@@ -2,9 +2,11 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { X, Grid3X3, LayoutList, ChevronDown } from 'lucide-react'
-import { locationTypes, cities } from '../data/locations'
+import { locationTypes, cities, filterCategories } from '../data/locations'
 import { useLocations } from '../hooks/useLocations'
 import LocationCard from '../components/LocationCard'
+import HierarchicalFilters from '../components/HierarchicalFilters'
+import { filterLocationsByHierarchy } from '../utils/filterUtils'
 
 const ease = [0.22, 1, 0.36, 1]
 
@@ -25,6 +27,10 @@ export default function Explore() {
   const [city, setCity] = useState(params.get('city') || 'All Cities')
   const [sort, setSort] = useState('Recommended')
   const [view, setView] = useState('grid')
+  const [showFilters, setShowFilters] = useState(false)
+  const [activeFilterTab, setActiveFilterTab] = useState('placeType')
+  const [placeTypeFilter, setPlaceTypeFilter] = useState([])
+  const [architectureFilter, setArchitectureFilter] = useState([])
 
   useEffect(() => {
     const next = new URLSearchParams()
@@ -35,13 +41,24 @@ export default function Explore() {
 
   const filtered = useMemo(() => {
     let result = [...locations]
-    if (type !== 'All') result = result.filter((l) => l.type === type.toLowerCase())
+
+    // Apply hierarchical filters if available, otherwise fall back to legacy type filter
+    if (placeTypeFilter.length > 0 || architectureFilter.length > 0) {
+      result = filterLocationsByHierarchy(result, placeTypeFilter, architectureFilter)
+    } else if (type !== 'All') {
+      result = result.filter((l) => l.type === type.toLowerCase())
+    }
+
+    // Apply city filter
     if (city !== 'All Cities') result = result.filter((l) => l.city === city)
+
+    // Apply sorting
     if (sort === 'Price: low to high') result.sort((a, b) => a.price - b.price)
     if (sort === 'Price: high to low') result.sort((a, b) => b.price - a.price)
     if (sort === 'Top rated') result.sort((a, b) => b.rating - a.rating)
+
     return result
-  }, [locations, type, city, sort])
+  }, [locations, type, city, sort, placeTypeFilter, architectureFilter])
 
   const headerRef = useRef(null)
   const { scrollYProgress } = useScroll({ target: headerRef, offset: ['start center', 'end center'] })
@@ -102,76 +119,145 @@ export default function Explore() {
 
       {/* Filters bar */}
       <section className="sticky top-16 md:top-20 z-30 bg-bg/90 backdrop-blur-xl border-b border-outline-variant/25">
-        <div className="container-main py-4 md:py-5 flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
-          {/* Type pills */}
-          <div className="flex items-center gap-2 flex-nowrap md:flex-wrap overflow-x-auto -mx-1 px-1 pb-1 md:pb-0" style={{ scrollbarWidth: 'none' }}>
-            {locationTypes.map((t) => (
+        <div className="container-main py-4 md:py-5 flex flex-col gap-4">
+          <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
+            {/* Filter tabs and controls */}
+            <div className="flex items-center gap-2">
               <button
-                key={t}
-                onClick={() => setType(t)}
-                className={`px-4 py-2 text-[10px] font-medium tracking-[0.25em] uppercase transition-all duration-300 whitespace-nowrap ${
-                  type === t
-                    ? 'bg-gold text-bg'
-                    : 'border border-outline-variant/40 text-on-surface-variant hover:text-gold hover:border-gold'
+                onClick={() => setShowFilters(!showFilters)}
+                className={`px-4 py-2 text-[10px] font-medium tracking-[0.25em] uppercase transition-all duration-300 border ${
+                  showFilters || placeTypeFilter.length > 0 || architectureFilter.length > 0
+                    ? 'bg-gold text-bg border-gold'
+                    : 'border-outline-variant/40 text-on-surface-variant hover:text-gold hover:border-gold'
                 }`}
               >
-                {t}
+                Advanced Filters
               </button>
-            ))}
+            </div>
+
+            <div className="md:ml-auto flex items-center gap-2 flex-wrap">
+              <div className="relative">
+                <select
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  className="appearance-none bg-transparent border border-outline-variant/40 text-on-surface text-xs px-4 py-2 pr-8 outline-none cursor-pointer hover:border-gold transition-colors font-light"
+                >
+                  {cities.map((c) => (
+                    <option key={c} value={c} className="bg-surface-low">
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3 h-3 text-on-surface-variant absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={1.5} />
+              </div>
+
+              <div className="relative">
+                <select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value)}
+                  className="appearance-none bg-transparent border border-outline-variant/40 text-on-surface text-xs px-4 py-2 pr-8 outline-none cursor-pointer hover:border-gold transition-colors font-light"
+                >
+                  {sortOptions.map((s) => (
+                    <option key={s} value={s} className="bg-surface-low">
+                      {s}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3 h-3 text-on-surface-variant absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={1.5} />
+              </div>
+
+              <div className="flex border border-outline-variant/40">
+                <button
+                  onClick={() => setView('grid')}
+                  className={`p-2.5 transition-colors ${view === 'grid' ? 'text-gold' : 'text-on-surface-variant hover:text-gold'}`}
+                  aria-label="Grid view"
+                >
+                  <Grid3X3 className="w-3.5 h-3.5" strokeWidth={1.5} />
+                </button>
+                <button
+                  onClick={() => setView('list')}
+                  className={`p-2.5 transition-colors border-l border-outline-variant/40 ${view === 'list' ? 'text-gold' : 'text-on-surface-variant hover:text-gold'}`}
+                  aria-label="List view"
+                >
+                  <LayoutList className="w-3.5 h-3.5" strokeWidth={1.5} />
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div className="md:ml-auto flex items-center gap-2 flex-wrap">
-            <div className="relative">
-              <select
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="appearance-none bg-transparent border border-outline-variant/40 text-on-surface text-xs px-4 py-2 pr-8 outline-none cursor-pointer hover:border-gold transition-colors font-light"
-              >
-                {cities.map((c) => (
-                  <option key={c} value={c} className="bg-surface-low">
-                    {c}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3 h-3 text-on-surface-variant absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={1.5} />
-            </div>
+          {/* Advanced filters panel */}
+          {showFilters && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.5, ease }}
+              className="border-t border-outline-variant/25 pt-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 mb-4 border-b border-outline-variant/25 pb-3">
+                <button
+                  onClick={() => setActiveFilterTab('placeType')}
+                  className={`text-xs font-medium tracking-[0.15em] uppercase transition-colors pb-2 ${
+                    activeFilterTab === 'placeType'
+                      ? 'text-gold border-b-2 border-gold'
+                      : 'text-on-surface-variant hover:text-gold'
+                  }`}
+                >
+                  {filterCategories.placeType.label}
+                </button>
+                <button
+                  onClick={() => setActiveFilterTab('architecture')}
+                  className={`text-xs font-medium tracking-[0.15em] uppercase transition-colors pb-2 ${
+                    activeFilterTab === 'architecture'
+                      ? 'text-gold border-b-2 border-gold'
+                      : 'text-on-surface-variant hover:text-gold'
+                  }`}
+                >
+                  {filterCategories.architecture.label}
+                </button>
+              </div>
 
-            <div className="relative">
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value)}
-                className="appearance-none bg-transparent border border-outline-variant/40 text-on-surface text-xs px-4 py-2 pr-8 outline-none cursor-pointer hover:border-gold transition-colors font-light"
-              >
-                {sortOptions.map((s) => (
-                  <option key={s} value={s} className="bg-surface-low">
-                    {s}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3 h-3 text-on-surface-variant absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={1.5} />
-            </div>
-
-            <div className="flex border border-outline-variant/40">
-              <button
-                onClick={() => setView('grid')}
-                className={`p-2.5 transition-colors ${view === 'grid' ? 'text-gold' : 'text-on-surface-variant hover:text-gold'}`}
-                aria-label="Grid view"
-              >
-                <Grid3X3 className="w-3.5 h-3.5" strokeWidth={1.5} />
-              </button>
-              <button
-                onClick={() => setView('list')}
-                className={`p-2.5 transition-colors border-l border-outline-variant/40 ${view === 'list' ? 'text-gold' : 'text-on-surface-variant hover:text-gold'}`}
-                aria-label="List view"
-              >
-                <LayoutList className="w-3.5 h-3.5" strokeWidth={1.5} />
-              </button>
-            </div>
-          </div>
+              <div className="max-w-2xl" onClick={(e) => e.stopPropagation()}>
+                {activeFilterTab === 'placeType' && (
+                  <HierarchicalFilters
+                    category={filterCategories.placeType}
+                    onFilterChange={(filters) => {
+                      setPlaceTypeFilter(filters)
+                      setShowFilters(false)
+                    }}
+                    selected={placeTypeFilter}
+                  />
+                )}
+                {activeFilterTab === 'architecture' && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {Object.entries(filterCategories.architecture.children).map(([key, data]) => (
+                      <button
+                        key={key}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          const newFilters = architectureFilter.includes(key) ? architectureFilter.filter(k => k !== key) : [...architectureFilter, key]
+                          setArchitectureFilter(newFilters)
+                          setShowFilters(false)
+                        }}
+                        className={`px-3 py-2 text-xs font-medium tracking-[0.15em] uppercase transition-all ${
+                          architectureFilter.includes(key)
+                            ? 'bg-gold text-bg'
+                            : 'border border-outline-variant/40 text-on-surface-variant hover:text-gold hover:border-gold'
+                        }`}
+                      >
+                        {data.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
         </div>
 
         {/* Active chips */}
-        {(type !== 'All' || city !== 'All Cities') && (
+        {(type !== 'All' || city !== 'All Cities' || placeTypeFilter.length > 0 || architectureFilter.length > 0) && (
           <div className="container-main pb-4 flex items-center gap-2 flex-wrap">
             <span className="eyebrow-sm text-on-surface-variant">Active</span>
             {type !== 'All' && (
@@ -182,6 +268,31 @@ export default function Explore() {
                 {type} <X className="w-2.5 h-2.5" strokeWidth={1.5} />
               </button>
             )}
+            {placeTypeFilter.map((path, idx) => (
+              <button
+                key={`place-${idx}`}
+                onClick={() => {
+                  const newFilters = placeTypeFilter.filter((_, i) => i !== idx)
+                  setPlaceTypeFilter(newFilters)
+                }}
+                className="flex items-center gap-2 chip-gold hover:bg-gold hover:text-bg transition-colors"
+              >
+                {path[path.length - 1]} <X className="w-2.5 h-2.5" strokeWidth={1.5} />
+              </button>
+            ))}
+            {architectureFilter.map((arch) => (
+              <button
+                key={`arch-${arch}`}
+                onClick={() => {
+                  const newFilters = architectureFilter.filter((a) => a !== arch)
+                  setArchitectureFilter(newFilters)
+                }}
+                className="flex items-center gap-2 chip-gold hover:bg-gold hover:text-bg transition-colors"
+              >
+                {filterCategories.architecture.children[arch]?.label || arch}
+                <X className="w-2.5 h-2.5" strokeWidth={1.5} />
+              </button>
+            ))}
             {city !== 'All Cities' && (
               <button
                 onClick={() => setCity('All Cities')}
