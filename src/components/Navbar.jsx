@@ -180,16 +180,19 @@ export default function Navbar() {
                           <p className="text-[10px] text-on-surface-variant uppercase tracking-wider">Signed in as</p>
                           <p className="text-sm text-on-surface truncate">{user.email}</p>
                         </div>
-                        {!isProfileComplete() && (
-                          <button
-                            onClick={() => { setProfileModalOpen(true); setAuthMenuOpen(false) }}
-                            className="w-full text-left px-4 py-3 text-sm text-gold hover:bg-gold/10 transition-colors flex items-center gap-2 border-b border-outline-variant/25"
-                          >
-                            <UserCog className="w-4 h-4" strokeWidth={1.5} />
-                            Complete profile
+                        <Link
+                          to="/profile"
+                          onClick={() => setAuthMenuOpen(false)}
+                          className={`w-full text-left px-4 py-3 text-sm hover:bg-gold/10 transition-colors flex items-center gap-2 border-b border-outline-variant/25 ${
+                            !isProfileComplete() ? 'text-gold' : 'text-on-surface'
+                          }`}
+                        >
+                          <UserCog className="w-4 h-4" strokeWidth={1.5} />
+                          {!isProfileComplete() ? 'Complete profile' : 'View / edit profile'}
+                          {!isProfileComplete() && (
                             <span className="ml-auto w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
-                          </button>
-                        )}
+                          )}
+                        </Link>
                         {!isEmailVerified && (
                           <button
                             onClick={() => { setEmailModalOpen(true); setAuthMenuOpen(false) }}
@@ -295,14 +298,15 @@ export default function Navbar() {
                             </div>
                           </div>
                         </div>
-                        <button
-                          onClick={() => { setProfileModalOpen(true); setAuthMenuOpen(false) }}
+                        <Link
+                          to="/profile"
+                          onClick={() => setAuthMenuOpen(false)}
                           className="w-full text-left px-4 py-3 text-sm text-on-surface hover:bg-gold/10 hover:text-gold transition-colors flex items-center gap-3 border-b border-outline-variant/20"
                         >
                           <UserCog className="w-4 h-4" strokeWidth={1.5} />
                           <span className="flex-1">View / edit profile</span>
                           {!isProfileComplete() && <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />}
-                        </button>
+                        </Link>
                         {!isEmailVerified && (
                           <button
                             onClick={() => { setEmailModalOpen(true); setAuthMenuOpen(false) }}
@@ -447,15 +451,18 @@ export default function Navbar() {
                   Dashboard
                 </Link>
               )}
-              {user && !isProfileComplete() && (
-                <button
-                  onClick={() => { setProfileModalOpen(true); setMenuOpen(false) }}
-                  className="inline-flex items-center gap-3 text-gold hover:text-gold-light text-[10px] tracking-[0.35em] uppercase transition-colors"
+              {user && (
+                <Link
+                  to="/profile"
+                  onClick={() => setMenuOpen(false)}
+                  className={`inline-flex items-center gap-3 text-[10px] tracking-[0.35em] uppercase transition-colors ${
+                    !isProfileComplete() ? 'text-gold hover:text-gold-light' : 'text-on-surface hover:text-gold'
+                  }`}
                 >
                   <UserCog className="w-3.5 h-3.5" strokeWidth={1.5} />
-                  Complete profile
-                  <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
-                </button>
+                  {!isProfileComplete() ? 'Complete profile' : 'My profile'}
+                  {!isProfileComplete() && <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />}
+                </Link>
               )}
               {user && !isEmailVerified && (
                 <button

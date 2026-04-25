@@ -23,6 +23,7 @@ import Dashboard from './pages/Dashboard'
 import Unauthorized from './pages/Unauthorized'
 import Favorites from './pages/Favorites'
 import Bookings from './pages/Bookings'
+import Profile from './pages/Profile'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Maintenance from './pages/Maintenance'
@@ -37,6 +38,7 @@ function AnimatedRoutes() {
         <Route path="/location/:id" element={<LocationDetail />} />
         <Route path="/favorites" element={<Favorites />} />
         <Route path="/bookings" element={<Bookings />} />
+        <Route path="/profile" element={<Profile />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/list-space" element={<ListSpace />} />
