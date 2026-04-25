@@ -251,13 +251,49 @@ export default function Navbar() {
             </Link>
           </div>
 
-          <button
-            className="md:hidden p-2 text-on-surface hover:text-gold transition-colors"
-            onClick={() => setMenuOpen((v) => !v)}
-            aria-label="Menu"
-          >
-            {menuOpen ? <X className="w-5 h-5" strokeWidth={1.5} /> : <Menu className="w-5 h-5" strokeWidth={1.5} />}
-          </button>
+          <div className="flex md:hidden items-center gap-1">
+            {user ? (
+              <Link
+                to="/bookings"
+                className="relative p-2 text-on-surface-variant hover:text-gold transition-colors"
+                aria-label="My bookings"
+              >
+                <div className="w-7 h-7 rounded-full bg-gold text-bg flex items-center justify-center font-semibold text-xs">
+                  {user.email?.[0].toUpperCase() || 'U'}
+                </div>
+                {(!isProfileComplete() || !isEmailVerified) && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-gold border-2 border-bg animate-pulse" />
+                )}
+              </Link>
+            ) : (
+              <Link
+                to="/login"
+                className="p-2 text-on-surface-variant hover:text-gold transition-colors"
+                aria-label="Sign in"
+              >
+                <UserCog className="w-5 h-5" strokeWidth={1.5} />
+              </Link>
+            )}
+            <Link
+              to="/favorites"
+              className="relative p-2 text-on-surface-variant hover:text-gold transition-colors"
+              aria-label="Favorites"
+            >
+              <Heart className={`w-5 h-5 ${favorites.length > 0 ? 'text-gold fill-gold/25' : ''}`} strokeWidth={1.5} />
+              {favorites.length > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-gold text-bg text-[9px] font-semibold flex items-center justify-center">
+                  {favorites.length}
+                </span>
+              )}
+            </Link>
+            <button
+              className="p-2 text-on-surface hover:text-gold transition-colors"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-label="Menu"
+            >
+              {menuOpen ? <X className="w-5 h-5" strokeWidth={1.5} /> : <Menu className="w-5 h-5" strokeWidth={1.5} />}
+            </button>
+          </div>
         </div>
       </motion.header>
 
@@ -294,13 +330,34 @@ export default function Navbar() {
               <Link to="/list-space" className="btn-primary">
                 List your space
               </Link>
+              {user && (
+                <Link
+                  to="/bookings"
+                  onClick={() => setMenuOpen(false)}
+                  className="inline-flex items-center gap-3 text-on-surface hover:text-gold text-[10px] tracking-[0.35em] uppercase transition-colors"
+                >
+                  <Calendar className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  My Bookings
+                </Link>
+              )}
               <Link
                 to="/favorites"
+                onClick={() => setMenuOpen(false)}
                 className="inline-flex items-center gap-3 text-on-surface-variant hover:text-gold text-[10px] tracking-[0.35em] uppercase transition-colors"
               >
                 <Heart className="w-3.5 h-3.5" strokeWidth={1.5} />
                 Favorites {favorites.length > 0 && `(${favorites.length})`}
               </Link>
+              {user && isAdmin && (
+                <Link
+                  to="/dashboard"
+                  onClick={() => setMenuOpen(false)}
+                  className="inline-flex items-center gap-3 text-on-surface hover:text-gold text-[10px] tracking-[0.35em] uppercase transition-colors"
+                >
+                  <LayoutDashboard className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  Dashboard
+                </Link>
+              )}
               {user && !isProfileComplete() && (
                 <button
                   onClick={() => { setProfileModalOpen(true); setMenuOpen(false) }}

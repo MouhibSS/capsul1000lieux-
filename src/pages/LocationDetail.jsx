@@ -14,6 +14,7 @@ import LocationCard from '../components/LocationCard'
 import LocationMap from '../components/LocationMap'
 import ProfileCompletionModal from '../components/ProfileCompletionModal'
 import BookingModal from '../components/BookingModal'
+import ThemedCalendar from '../components/ThemedCalendar'
 
 const ease = [0.22, 1, 0.36, 1]
 
@@ -203,7 +204,7 @@ export default function LocationDetail() {
       </AnimatePresence>
 
       {/* Breadcrumb + top actions */}
-      <div className="container-main pt-24 md:pt-28 pb-4 md:pb-6 flex items-center justify-between gap-4">
+      <div className="container-main pt-20 md:pt-28 pb-3 md:pb-6 flex items-center justify-between gap-4">
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-3 text-on-surface-variant hover:text-gold text-[10px] tracking-[0.35em] uppercase transition-colors group"
@@ -244,7 +245,7 @@ export default function LocationDetail() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.9, ease, delay: 0.1 }}
-              className="font-display font-light text-4xl sm:text-5xl md:text-7xl lg:text-[7.5rem] leading-[0.9] tracking-display text-on-surface uppercase"
+              className="font-display font-light text-3xl sm:text-5xl md:text-7xl lg:text-[7.5rem] leading-[0.9] tracking-display text-on-surface uppercase break-words"
             >
               {location.name}
             </motion.h1>
@@ -582,17 +583,11 @@ export default function LocationDetail() {
                 </div>
 
                 <div className="p-5 md:p-7 space-y-5">
-                  <div>
-                    <label className="eyebrow-sm text-on-surface-variant mb-2 block">
-                      Start date
-                    </label>
-                    <input
-                      type="date"
-                      value={bookingDate}
-                      onChange={(e) => setBookingDate(e.target.value)}
-                      className="w-full bg-bg border border-outline-variant/40 px-4 py-3 text-on-surface text-sm outline-none focus:border-gold transition-colors"
-                    />
-                  </div>
+                  <ThemedCalendar
+                    label="Start date"
+                    value={bookingDate}
+                    onChange={setBookingDate}
+                  />
 
                   <div>
                     <label className="eyebrow-sm text-on-surface-variant mb-2 block">
@@ -704,6 +699,32 @@ export default function LocationDetail() {
           </div>
         </section>
       )}
+
+      {/* Mobile sticky bottom bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-bg/95 backdrop-blur-xl border-t border-outline-variant/30 px-4 py-3 flex items-center gap-3 safe-bottom">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-1">
+            <span className="font-display text-xl font-light text-on-surface tabular-nums">
+              {location.currency}{location.price}
+            </span>
+            <span className="text-on-surface-variant text-xs">/ day</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[10px] text-on-surface-variant">
+            <Star className="w-3 h-3 text-gold" fill="currentColor" />
+            <span>{location.rating}</span>
+            <span>·</span>
+            <span className="truncate">{location.city}</span>
+          </div>
+        </div>
+        <button
+          onClick={handleBookNow}
+          className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-3 bg-gold text-bg font-semibold text-xs tracking-[0.18em] uppercase rounded hover:bg-gold-light transition-colors"
+        >
+          <Calendar className="w-3.5 h-3.5" strokeWidth={1.8} />
+          Book
+        </button>
+      </div>
+      <div className="lg:hidden h-20" aria-hidden />
 
       {/* Modals */}
       <ProfileCompletionModal

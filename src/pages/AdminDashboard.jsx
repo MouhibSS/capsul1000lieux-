@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, Link } from 'react-router-dom'
 import {
   BarChart3, MapPin, Settings, Calendar, LogOut, Heart, Search, Bell, ExternalLink, Sparkles,
-  Power, AlertTriangle, ShieldCheck, X, Eye, Info, Check,
+  Power, AlertTriangle, ShieldCheck, X, Eye, Info, Check, Menu,
 } from 'lucide-react'
 import { useAuthContext } from '../context/AuthContext'
 import { useMaintenanceContext } from '../context/MaintenanceContext'
@@ -27,6 +27,7 @@ export default function AdminDashboard() {
   const [maintModalOpen, setMaintModalOpen] = useState(false)
   const [maintBusy, setMaintBusy] = useState(false)
   const [maintError, setMaintError] = useState('')
+  const [drawerOpen, setDrawerOpen] = useState(false)
   const navigate = useNavigate()
   const [toast, setToast] = useState(null)
   const { user, logout } = useAuthContext()
@@ -93,8 +94,23 @@ export default function AdminDashboard() {
           </motion.div>
         )}
       </AnimatePresence>
-      {/* Sidebar */}
-      <aside className="w-60 flex-shrink-0 h-screen sticky top-0 bg-[#0f0f0f] border-r border-white/5 flex flex-col">
+      {/* Mobile drawer backdrop */}
+      <AnimatePresence>
+        {drawerOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm md:hidden"
+            onClick={() => setDrawerOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Sidebar (desktop static / mobile drawer) */}
+      <aside className={`fixed md:sticky top-0 left-0 z-50 md:z-auto w-60 flex-shrink-0 h-screen md:h-screen bg-[#0f0f0f] border-r border-white/5 flex flex-col transition-transform duration-300 ease-out ${
+        drawerOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+      }`}>
         {/* Brand */}
         <Link to="/" className="px-5 py-5 border-b border-white/5 flex items-center gap-2.5 group">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gold to-gold-light flex items-center justify-center flex-shrink-0 shadow-lg shadow-gold/20">
@@ -115,7 +131,7 @@ export default function AdminDashboard() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => { setActiveTab(tab.id); setDrawerOpen(false) }}
                 className={`relative w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left transition-all ${
                   isActive
                     ? 'bg-white/[0.06] text-on-surface'
@@ -165,7 +181,16 @@ export default function AdminDashboard() {
       <main className="flex-1 min-w-0 flex flex-col">
         {/* Topbar — redesigned */}
         <div className="sticky top-0 z-30 bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-white/5">
-          <div className="px-6 py-3 flex items-center gap-4">
+          <div className="px-3 md:px-6 py-2.5 md:py-3 flex items-center gap-2 md:gap-4">
+            {/* Mobile menu toggle */}
+            <button
+              onClick={() => setDrawerOpen(true)}
+              className="md:hidden p-2 -ml-1 text-on-surface hover:text-gold rounded-lg hover:bg-white/5 transition-colors"
+              aria-label="Open menu"
+            >
+              <Menu className="w-5 h-5" strokeWidth={1.75} />
+            </button>
+
             {/* Search */}
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-on-surface-variant" strokeWidth={2} />
@@ -173,14 +198,14 @@ export default function AdminDashboard() {
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Quick search..."
+                placeholder="Search..."
                 className="w-full pl-9 pr-3 py-2 text-xs bg-white/[0.04] border border-white/[0.06] rounded-lg text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:border-gold/40 focus:bg-white/[0.06] transition-all"
               />
               <kbd className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[9px] font-mono text-on-surface-variant bg-white/[0.05] border border-white/[0.06] rounded">⌘K</kbd>
             </div>
 
             {/* Right actions */}
-            <div className="flex items-center gap-2 ml-auto">
+            <div className="flex items-center gap-1.5 md:gap-2 ml-auto">
               <div className={`hidden lg:flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors ${
                 maintenanceMode
                   ? 'bg-red-500/10 text-red-400 border border-red-500/30'
@@ -232,23 +257,23 @@ export default function AdminDashboard() {
 
           {/* Section header with accent */}
           {activeTabData && (
-            <div className="relative px-6 py-5 border-t border-white/5 overflow-hidden">
+            <div className="relative px-4 md:px-6 py-4 md:py-5 border-t border-white/5 overflow-hidden">
               <div className={`absolute inset-0 bg-gradient-to-r ${activeTabData.accent} opacity-40 pointer-events-none`} />
               <div className="relative flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${activeTabData.accent} border border-white/10 flex items-center justify-center flex-shrink-0 backdrop-blur-sm`}>
-                    <activeTabData.icon className="w-5 h-5 text-on-surface" strokeWidth={1.5} />
+                <div className="flex items-center gap-3 md:gap-4 min-w-0">
+                  <div className={`w-9 h-9 md:w-11 md:h-11 rounded-xl bg-gradient-to-br ${activeTabData.accent} border border-white/10 flex items-center justify-center flex-shrink-0 backdrop-blur-sm`}>
+                    <activeTabData.icon className="w-4 h-4 md:w-5 md:h-5 text-on-surface" strokeWidth={1.5} />
                   </div>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
+                    <div className="hidden md:flex items-center gap-2 mb-0.5">
                       <p className="text-[10px] text-on-surface-variant uppercase tracking-[0.25em]">Dashboard</p>
                       <span className="text-on-surface-variant/40">/</span>
                       <p className="text-[10px] text-gold uppercase tracking-[0.25em]">{activeTabData.label}</p>
                     </div>
-                    <h1 className="font-display text-2xl font-light text-on-surface uppercase tracking-wide truncate">
+                    <h1 className="font-display text-lg md:text-2xl font-light text-on-surface uppercase tracking-wide truncate">
                       {activeTabData.label}
                     </h1>
-                    <p className="text-xs text-on-surface-variant mt-0.5">{activeTabData.desc}</p>
+                    <p className="text-[11px] md:text-xs text-on-surface-variant mt-0.5 truncate">{activeTabData.desc}</p>
                   </div>
                 </div>
               </div>
@@ -257,7 +282,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto pb-20 md:pb-0">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -265,7 +290,7 @@ export default function AdminDashboard() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
-              className="p-6"
+              className="p-3 md:p-6"
             >
               {activeTab === 'locations' && <AdminLocations />}
               {activeTab === 'filters' && <AdminFilters />}
@@ -276,6 +301,31 @@ export default function AdminDashboard() {
           </AnimatePresence>
         </div>
       </main>
+
+      {/* Mobile bottom nav */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-[#0f0f0f]/95 backdrop-blur-xl border-t border-white/10">
+        <div className="flex items-stretch justify-around">
+          {tabs.map((tab) => {
+            const Icon = tab.icon
+            const isActive = activeTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 transition-colors ${
+                  isActive ? 'text-gold' : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                {isActive && (
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-gold rounded-b-full" />
+                )}
+                <Icon className="w-4 h-4" strokeWidth={isActive ? 2 : 1.5} />
+                <span className="text-[9px] font-medium tracking-wider uppercase">{tab.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </nav>
 
       {/* Maintenance Mode Modal */}
       <AnimatePresence>

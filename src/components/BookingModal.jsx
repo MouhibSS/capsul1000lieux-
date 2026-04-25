@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 import { useBookings } from '../hooks/useBookings'
+import ThemedCalendar from './ThemedCalendar'
 
 export default function BookingModal({ isOpen, onClose, location }) {
   const { createBooking, loading } = useBookings()
@@ -103,30 +104,12 @@ export default function BookingModal({ isOpen, onClose, location }) {
 
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs text-on-surface-variant uppercase tracking-wide block mb-2">
-                        Check-in
-                      </label>
-                      <input
-                        type="date"
-                        value={formData.startDate}
-                        onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                        className="w-full px-3 py-2.5 text-sm bg-bg border border-outline-variant/40 rounded text-on-surface outline-none focus:border-gold transition-colors"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-on-surface-variant uppercase tracking-wide block mb-2">
-                        Check-out
-                      </label>
-                      <input
-                        type="date"
-                        value={formData.endDate}
-                        onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                        className="w-full px-3 py-2.5 text-sm bg-bg border border-outline-variant/40 rounded text-on-surface outline-none focus:border-gold transition-colors"
-                      />
-                    </div>
-                  </div>
+                  <ThemedCalendar
+                    mode="range"
+                    label="Stay dates"
+                    value={{ start: formData.startDate, end: formData.endDate }}
+                    onChange={({ start, end }) => setFormData({ ...formData, startDate: start, endDate: end })}
+                  />
 
                   <div>
                     <label className="text-xs text-on-surface-variant uppercase tracking-wide block mb-2">

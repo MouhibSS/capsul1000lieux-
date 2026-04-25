@@ -34,6 +34,9 @@ export default function SignatureEmblem() {
   const [countryPath, setCountryPath] = useState(null)
   const [projectFn, setProjectFn] = useState(null) // function: [lng,lat] -> [x,y]
   const [locations, setLocations] = useState([])
+  const [activePin, setActivePin] = useState(null)
+  const [showHint, setShowHint] = useState(true)
+  const [isCoarsePtr, setIsCoarsePtr] = useState(false)
 
   // Fetch and project Tunisia outline + sample locations
   useEffect(() => {
@@ -83,6 +86,7 @@ export default function SignatureEmblem() {
     if (!el) return
 
     const isCoarse = window.matchMedia('(pointer: coarse)').matches
+    setIsCoarsePtr(isCoarse)
     let lastMouseTs = 0
 
     const onMove = (e) => {
@@ -94,7 +98,23 @@ export default function SignatureEmblem() {
       lastMouseTs = performance.now()
     }
 
+    const onTouch = (e) => {
+      if (!e.touches || !e.touches[0]) return
+      const t0 = e.touches[0]
+      const rect = el.getBoundingClientRect()
+      const px = (t0.clientX - rect.left) / rect.width
+      const py = (t0.clientY - rect.top) / rect.height
+      mx.set(Math.max(-1, Math.min(1, px * 2 - 1)))
+      my.set(Math.max(-1, Math.min(1, py * 2 - 1)))
+      lastMouseTs = performance.now()
+      setShowHint(false)
+    }
+
     if (!isCoarse) el.addEventListener('mousemove', onMove)
+    if (isCoarse) {
+      el.addEventListener('touchmove', onTouch, { passive: true })
+      el.addEventListener('touchstart', onTouch, { passive: true })
+    }
 
     let gyroHandler = null
     const attachGyro = () => {
@@ -135,6 +155,8 @@ export default function SignatureEmblem() {
 
     return () => {
       el.removeEventListener('mousemove', onMove)
+      el.removeEventListener('touchmove', onTouch)
+      el.removeEventListener('touchstart', onTouch)
       if (gyroHandler) window.removeEventListener('deviceorientation', gyroHandler)
       cancelAnimationFrame(rafId)
     }
@@ -202,8 +224,28 @@ export default function SignatureEmblem() {
             style={{ rotateX: rotX, rotateY: rotY, transformStyle: 'preserve-3d' }}
             className="relative w-[260px] h-[400px] xs:w-[290px] xs:h-[440px] sm:w-[340px] sm:h-[520px] md:w-[380px] md:h-[580px] lg:w-[420px] lg:h-[640px]"
           >
-            <TunisiaMap countryPath={countryPath} projectFn={projectFn} locations={locations} />
+            <TunisiaMap
+              countryPath={countryPath}
+              projectFn={projectFn}
+              locations={locations}
+              activePin={activePin}
+              setActivePin={setActivePin}
+              isCoarsePtr={isCoarsePtr}
+            />
           </motion.div>
+
+          {/* Mobile interactive hint */}
+          {isCoarsePtr && showHint && countryPath && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ delay: 1.2, duration: 0.6 }}
+              className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1.5 text-[9px] tracking-[0.3em] uppercase text-gold/80 border border-gold/30 bg-bg/70 backdrop-blur-md rounded-full pointer-events-none z-20 whitespace-nowrap"
+            >
+              Drag · Tilt · Tap pins
+            </motion.div>
+          )}
 
           {gyroPermState === 'asking' && (
             <button
@@ -270,7 +312,7 @@ function SideMark({ align = 'left', label, numeral }) {
 }
 
 /* ───────────── 3D Tunisia map with location pins ───────────── */
-function TunisiaMap({ countryPath, projectFn, locations }) {
+function TunisiaMap({ countryPath, projectFn, locations, activePin, setActivePin, isCoarsePtr }) {
   return (
     <div className="absolute inset-0" style={{ transformStyle: 'preserve-3d' }}>
       {/* Ground glow halo */}
@@ -380,13 +422,25 @@ function TunisiaMap({ countryPath, projectFn, locations }) {
         locations.map((loc, i) => {
           const p = projectFn([loc.longitude, loc.latitude])
           if (!p) return null
-          return <LocationPin key={loc.id} loc={loc} x={p[0]} y={p[1]} delay={i * 0.06} />
+          return (
+            <LocationPin
+              key={loc.id}
+              loc={loc}
+              x={p[0]}
+              y={p[1]}
+              delay={i * 0.06}
+              isActive={activePin === loc.id}
+              onActivate={() => setActivePin?.(loc.id)}
+              onDismiss={() => setActivePin?.(null)}
+              isCoarsePtr={isCoarsePtr}
+            />
+          )
         })}
     </div>
   )
 }
 
-function LocationPin({ loc, x, y, delay }) {
+function LocationPin({ loc, x, y, delay, isActive, onActivate, onDismiss, isCoarsePtr }) {
   const left = `${(x / VB_W) * 100}%`
   const top = `${(y / VB_H) * 100}%`
   const z = 50 + ((loc.id || 0) % 5) * 10
@@ -400,20 +454,48 @@ function LocationPin({ loc, x, y, delay }) {
       className="absolute"
       style={{ left, top, transform: `translate(-50%, -100%) translateZ(${z}px)`, transformStyle: 'preserve-3d' }}
     >
-      <Link to={`/location/${loc.id}`} className="group relative flex flex-col items-center">
-        <motion.div
-          animate={{ y: [0, -3, 0] }}
-          transition={{ duration: 3 + (z % 4) * 0.3, repeat: Infinity, ease: 'easeInOut', delay: delay * 2 }}
-          className="flex items-center gap-1.5 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-full bg-bg/85 backdrop-blur-md border border-gold/40 shadow-[0_8px_30px_rgba(0,0,0,0.6)] group-hover:border-gold group-hover:bg-gold/15 transition-colors whitespace-nowrap"
-        >
-          <MapPin className="w-3 h-3 text-gold shrink-0" strokeWidth={1.8} />
-          <span className="text-[8px] sm:text-[9px] font-medium tracking-[0.18em] uppercase text-on-surface group-hover:text-gold transition-colors">
-            {loc.name}
+      <Link
+        to={`/location/${loc.id}`}
+        onClick={(e) => {
+          if (isCoarsePtr && !isActive) {
+            e.preventDefault()
+            onActivate?.()
+          }
+        }}
+        className="group relative flex flex-col items-center pointer-events-auto"
+        style={{ touchAction: 'manipulation' }}
+      >
+        {/* Tap target halo (mobile) */}
+        <span className="absolute -inset-3 sm:-inset-2" />
+
+        {isActive ? (
+          <span
+            className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gold text-bg shadow-[0_10px_40px_rgba(200,169,106,0.5)] whitespace-nowrap z-10"
+          >
+            <MapPin className="w-3 h-3 shrink-0" strokeWidth={2} />
+            <span className="text-[9px] font-semibold tracking-[0.18em] uppercase">{loc.name}</span>
+            <span className="text-[8px] font-mono opacity-70">→</span>
           </span>
-        </motion.div>
+        ) : (
+          <motion.div
+            animate={{ y: [0, -3, 0], scale: 1 }}
+            whileHover={{ scale: 1.08 }}
+            transition={{ y: { duration: 3 + (z % 4) * 0.3, repeat: Infinity, ease: 'easeInOut', delay: delay * 2 } }}
+            className="flex items-center gap-1.5 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-full bg-bg/85 backdrop-blur-md border border-gold/40 shadow-[0_8px_30px_rgba(0,0,0,0.6)] group-hover:border-gold group-hover:bg-gold/15 transition-colors whitespace-nowrap"
+          >
+            <MapPin className="w-3 h-3 text-gold shrink-0" strokeWidth={1.8} />
+            <span className="text-[8px] sm:text-[9px] font-medium tracking-[0.18em] uppercase text-on-surface group-hover:text-gold transition-colors">
+              {loc.name}
+            </span>
+          </motion.div>
+        )}
         <span className="block w-px h-3 sm:h-4 bg-gradient-to-b from-gold/80 to-gold/0" />
-        <span className="block w-1.5 h-1.5 rounded-full bg-gold shadow-[0_0_8px_rgba(200,169,106,0.9)]" />
-        <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[7px] sm:text-[8px] font-mono tracking-[0.25em] uppercase text-on-surface-variant/70 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+        <motion.span
+          animate={isActive ? { scale: [1, 1.6, 1] } : { scale: 1 }}
+          transition={{ duration: 1.4, repeat: isActive ? Infinity : 0, ease: 'easeInOut' }}
+          className="block w-1.5 h-1.5 rounded-full bg-gold shadow-[0_0_8px_rgba(200,169,106,0.9)]"
+        />
+        <span className={`absolute -bottom-4 left-1/2 -translate-x-1/2 text-[7px] sm:text-[8px] font-mono tracking-[0.25em] uppercase text-on-surface-variant/70 transition-opacity whitespace-nowrap ${isActive ? 'opacity-100 text-gold' : 'opacity-0 group-hover:opacity-100'}`}>
           {loc.city}
         </span>
       </Link>

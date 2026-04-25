@@ -143,7 +143,7 @@ export default function AdminBookings() {
             </button>
           ))}
         </div>
-        <div className="flex border border-outline-variant/40 rounded">
+        <div className="hidden md:flex border border-outline-variant/40 rounded">
           <button onClick={() => setViewMode('table')} className={`p-1.5 transition-colors ${viewMode === 'table' ? 'text-gold bg-gold/10' : 'text-on-surface-variant hover:text-gold'}`}>
             <LayoutList className="w-4 h-4" strokeWidth={1.5} />
           </button>
@@ -153,9 +153,9 @@ export default function AdminBookings() {
         </div>
       </div>
 
-      {/* Table View */}
+      {/* Table View — desktop only; mobile auto uses grid */}
       {viewMode === 'table' ? (
-        <div className="border border-outline-variant/25 rounded-lg overflow-hidden">
+        <div className="hidden md:block border border-outline-variant/25 rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
@@ -193,9 +193,9 @@ export default function AdminBookings() {
             </table>
           </div>
         </div>
-      ) : (
-        /* Grid View */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      ) : null}
+      {/* Grid View — always visible on mobile, or when chosen on desktop */}
+      <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 ${viewMode === 'table' ? 'md:hidden' : ''}`}>
           {filteredBookings.length > 0 ? filteredBookings.map((b) => (
             <motion.div
               key={b.id}
@@ -233,7 +233,6 @@ export default function AdminBookings() {
             <div className="col-span-full text-center py-8 text-on-surface-variant text-xs">No bookings found</div>
           )}
         </div>
-      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
