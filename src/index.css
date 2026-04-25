@@ -301,6 +301,15 @@
     display: inline-flex;
     animation: marquee 45s linear infinite;
   }
+  /* Inline marquee animation utility */
+  .animate-marquee {
+    animation: marquee 35s linear infinite;
+  }
+  /* Hide scrollbars for snap scrollers */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+  /* iOS safe-area helper */
+  .safe-bottom { padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); }
 
   /* Mapbox dark tuning */
   .mapboxgl-ctrl-bottom-left,

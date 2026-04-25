@@ -253,18 +253,107 @@ export default function Navbar() {
 
           <div className="flex md:hidden items-center gap-1">
             {user ? (
-              <Link
-                to="/bookings"
-                className="relative p-2 text-on-surface-variant hover:text-gold transition-colors"
-                aria-label="My bookings"
-              >
-                <div className="w-7 h-7 rounded-full bg-gold text-bg flex items-center justify-center font-semibold text-xs">
-                  {user.email?.[0].toUpperCase() || 'U'}
-                </div>
-                {(!isProfileComplete() || !isEmailVerified) && (
-                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-gold border-2 border-bg animate-pulse" />
-                )}
-              </Link>
+              <div className="relative">
+                <button
+                  onClick={() => setAuthMenuOpen((v) => !v)}
+                  className="relative p-1.5 text-on-surface-variant hover:text-gold transition-colors"
+                  aria-label="Account menu"
+                  aria-expanded={authMenuOpen}
+                >
+                  <div className="w-8 h-8 rounded-full bg-gold text-bg flex items-center justify-center font-semibold text-sm">
+                    {user.email?.[0].toUpperCase() || 'U'}
+                  </div>
+                  {(!isProfileComplete() || !isEmailVerified) && (
+                    <span className="absolute top-0.5 right-0.5 w-2.5 h-2.5 rounded-full bg-gold border-2 border-bg animate-pulse" />
+                  )}
+                </button>
+                <AnimatePresence>
+                  {authMenuOpen && (
+                    <>
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-40"
+                        onClick={() => setAuthMenuOpen(false)}
+                      />
+                      <motion.div
+                        initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                        transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                        className="absolute right-0 mt-2 z-50 w-[260px] bg-surface-low border border-outline-variant/40 rounded-lg shadow-2xl overflow-hidden"
+                      >
+                        <div className="px-4 py-3 border-b border-outline-variant/25 bg-gradient-to-r from-gold/5 to-transparent">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-gold text-bg flex items-center justify-center font-semibold">
+                              {user.email?.[0].toUpperCase() || 'U'}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[9px] text-on-surface-variant uppercase tracking-[0.25em]">Signed in</p>
+                              <p className="text-xs text-on-surface truncate">{user.email}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => { setProfileModalOpen(true); setAuthMenuOpen(false) }}
+                          className="w-full text-left px-4 py-3 text-sm text-on-surface hover:bg-gold/10 hover:text-gold transition-colors flex items-center gap-3 border-b border-outline-variant/20"
+                        >
+                          <UserCog className="w-4 h-4" strokeWidth={1.5} />
+                          <span className="flex-1">View / edit profile</span>
+                          {!isProfileComplete() && <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />}
+                        </button>
+                        {!isEmailVerified && (
+                          <button
+                            onClick={() => { setEmailModalOpen(true); setAuthMenuOpen(false) }}
+                            className="w-full text-left px-4 py-3 text-sm text-gold hover:bg-gold/10 transition-colors flex items-center gap-3 border-b border-outline-variant/20"
+                          >
+                            <Mail className="w-4 h-4" strokeWidth={1.5} />
+                            <span className="flex-1">Verify email</span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
+                          </button>
+                        )}
+                        <Link
+                          to="/bookings"
+                          onClick={() => setAuthMenuOpen(false)}
+                          className="w-full text-left px-4 py-3 text-sm text-on-surface hover:bg-gold/10 hover:text-gold transition-colors flex items-center gap-3 border-b border-outline-variant/20"
+                        >
+                          <Calendar className="w-4 h-4" strokeWidth={1.5} />
+                          My bookings
+                        </Link>
+                        <Link
+                          to="/favorites"
+                          onClick={() => setAuthMenuOpen(false)}
+                          className="w-full text-left px-4 py-3 text-sm text-on-surface hover:bg-gold/10 hover:text-gold transition-colors flex items-center gap-3 border-b border-outline-variant/20"
+                        >
+                          <Heart className="w-4 h-4" strokeWidth={1.5} />
+                          <span className="flex-1">Favorites</span>
+                          {favorites.length > 0 && (
+                            <span className="text-[10px] text-on-surface-variant">{favorites.length}</span>
+                          )}
+                        </Link>
+                        {isAdmin && (
+                          <Link
+                            to="/dashboard"
+                            onClick={() => setAuthMenuOpen(false)}
+                            className="w-full text-left px-4 py-3 text-sm text-on-surface hover:bg-gold/10 hover:text-gold transition-colors flex items-center gap-3 border-b border-outline-variant/20"
+                          >
+                            <LayoutDashboard className="w-4 h-4" strokeWidth={1.5} />
+                            Admin dashboard
+                          </Link>
+                        )}
+                        <button
+                          onClick={async () => { await logout(); setAuthMenuOpen(false) }}
+                          className="w-full text-left px-4 py-3 text-sm text-on-surface hover:bg-red-500/10 hover:text-red-400 transition-colors flex items-center gap-3"
+                        >
+                          <LogOut className="w-4 h-4" strokeWidth={1.5} />
+                          Log out
+                        </button>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
             ) : (
               <Link
                 to="/login"

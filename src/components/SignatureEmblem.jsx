@@ -26,9 +26,11 @@ export default function SignatureEmblem() {
   const mx = useMotionValue(0)
   const my = useMotionValue(0)
 
-  const springCfg = { stiffness: 80, damping: 20, mass: 0.8 }
-  const rotX = useSpring(useTransform(my, [-1, 1], [12, -12]), springCfg)
-  const rotY = useSpring(useTransform(mx, [-1, 1], [-18, 18]), springCfg)
+  const springCfg = { stiffness: 90, damping: 18, mass: 0.7 }
+  const rotX = useSpring(useTransform(my, [-1, 1], [28, -28]), springCfg)
+  const rotY = useSpring(useTransform(mx, [-1, 1], [-40, 40]), springCfg)
+  const rotZ = useSpring(useTransform(mx, [-1, 1], [-3, 3]), springCfg)
+  const lift = useSpring(useTransform(my, [-1, 1], [10, -10]), springCfg)
 
   const [gyroPermState, setGyroPermState] = useState('idle')
   const [countryPath, setCountryPath] = useState(null)
@@ -140,14 +142,15 @@ export default function SignatureEmblem() {
     let rafId = 0
     let t = 0
     const loop = () => {
-      t += 0.006
+      t += 0.012
       const idleSince = performance.now() - lastMouseTs
-      if (idleSince > 700) {
-        const blend = Math.min(1, (idleSince - 700) / 600)
-        const targetX = Math.sin(t) * 0.28
-        const targetY = Math.cos(t * 0.72) * 0.2
-        mx.set(mx.get() + (targetX - mx.get()) * 0.02 * blend)
-        my.set(my.get() + (targetY - my.get()) * 0.02 * blend)
+      if (idleSince > 500) {
+        const blend = Math.min(1, (idleSince - 500) / 400)
+        // Bigger figure-8 idle path so it's clearly alive
+        const targetX = Math.sin(t) * 0.75
+        const targetY = Math.cos(t * 0.7) * 0.55
+        mx.set(mx.get() + (targetX - mx.get()) * 0.045 * blend)
+        my.set(my.get() + (targetY - my.get()) * 0.045 * blend)
       }
       rafId = requestAnimationFrame(loop)
     }
@@ -221,7 +224,7 @@ export default function SignatureEmblem() {
           <SideMark align="right" label={t.signatureSouth} numeral="33°N" />
 
           <motion.div
-            style={{ rotateX: rotX, rotateY: rotY, transformStyle: 'preserve-3d' }}
+            style={{ rotateX: rotX, rotateY: rotY, rotateZ: rotZ, y: lift, transformStyle: 'preserve-3d' }}
             className="relative w-[260px] h-[400px] xs:w-[290px] xs:h-[440px] sm:w-[340px] sm:h-[520px] md:w-[380px] md:h-[580px] lg:w-[420px] lg:h-[640px]"
           >
             <TunisiaMap
@@ -325,18 +328,29 @@ function TunisiaMap({ countryPath, projectFn, locations, activePin, setActivePin
         }}
       />
 
-      {/* Compass rose */}
+      {/* Compass rose — sped up for visible motion */}
       <motion.div
         animate={{ rotate: 360 }}
-        transition={{ duration: 240, repeat: Infinity, ease: 'linear' }}
+        transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
         className="absolute inset-[-6%] rounded-full pointer-events-none"
-        style={{ transform: 'translateZ(-30px)', border: '1px dashed rgba(200,169,106,0.18)' }}
+        style={{ transform: 'translateZ(-30px)', border: '1px dashed rgba(200,169,106,0.28)' }}
       />
       <motion.div
         animate={{ rotate: -360 }}
-        transition={{ duration: 360, repeat: Infinity, ease: 'linear' }}
+        transition={{ duration: 90, repeat: Infinity, ease: 'linear' }}
         className="absolute inset-[2%] rounded-full pointer-events-none"
-        style={{ transform: 'translateZ(-10px)', border: '1px solid rgba(200,169,106,0.10)' }}
+        style={{ transform: 'translateZ(-10px)', border: '1px solid rgba(200,169,106,0.18)' }}
+      />
+      {/* Radar sweep (fast visible motion) */}
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+        className="absolute inset-[-6%] rounded-full pointer-events-none"
+        style={{
+          transform: 'translateZ(-20px)',
+          background: 'conic-gradient(from 0deg, transparent 0deg, rgba(200,169,106,0.25) 30deg, transparent 60deg)',
+          mixBlendMode: 'screen',
+        }}
       />
 
       <svg
@@ -371,10 +385,15 @@ function TunisiaMap({ countryPath, projectFn, locations, activePin, setActivePin
               <path d={countryPath} fill="#000" opacity="0.55" transform="translate(6 8)" />
             </g>
 
-            {/* Country body */}
+            {/* Country body — animated stroke pulse for life */}
             <g>
-              <path d={countryPath} fill="url(#tnPlate)" stroke="url(#tnGold)" strokeWidth="0.8" filter="url(#tnGlow)" />
+              <path d={countryPath} fill="url(#tnPlate)" stroke="url(#tnGold)" strokeWidth="0.8" filter="url(#tnGlow)">
+                <animate attributeName="stroke-width" values="0.6;1.4;0.6" dur="3.2s" repeatCount="indefinite" />
+              </path>
               <path d={countryPath} fill="url(#tnGrid)" opacity="0.9" />
+              <path d={countryPath} fill="none" stroke="rgba(232,201,138,0.6)" strokeWidth="0.3" strokeDasharray="2 6">
+                <animate attributeName="stroke-dashoffset" values="0;-32" dur="5s" repeatCount="indefinite" />
+              </path>
             </g>
 
             {/* Inner outline */}
@@ -398,15 +417,21 @@ function TunisiaMap({ countryPath, projectFn, locations, activePin, setActivePin
           </g>
         )}
 
-        {/* Location dots on the country */}
+        {/* Location dots on the country with animated radar ping */}
         {projectFn &&
-          locations.map((loc) => {
+          locations.map((loc, i) => {
             const p = projectFn([loc.longitude, loc.latitude])
             if (!p) return null
             return (
               <g key={`d-${loc.id}`}>
+                <circle cx={p[0]} cy={p[1]} r="2" fill="none" stroke="rgba(200,169,106,0.5)" strokeWidth="0.4">
+                  <animate attributeName="r" values="2;7;2" dur="2.4s" begin={`${i * 0.35}s`} repeatCount="indefinite" />
+                  <animate attributeName="opacity" values="0.9;0;0.9" dur="2.4s" begin={`${i * 0.35}s`} repeatCount="indefinite" />
+                </circle>
                 <circle cx={p[0]} cy={p[1]} r="2" fill="#0a0a0a" stroke="url(#tnGold)" strokeWidth="0.6" />
-                <circle cx={p[0]} cy={p[1]} r="0.7" fill="#E8C98A" />
+                <circle cx={p[0]} cy={p[1]} r="0.9" fill="#E8C98A">
+                  <animate attributeName="opacity" values="0.5;1;0.5" dur="1.6s" begin={`${i * 0.2}s`} repeatCount="indefinite" />
+                </circle>
               </g>
             )
           })}
