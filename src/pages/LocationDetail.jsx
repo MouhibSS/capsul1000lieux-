@@ -555,12 +555,13 @@ export default function LocationDetail() {
                 city={location.city}
                 country={location.country}
                 height={460}
-                zoom={13}
+                zoom={14}
+                radius={1000}
               />
               <p className="text-on-surface-variant text-sm mt-4 font-light max-w-lg">
-                Exact address shared with confirmed bookings. Nearest airport
-                and production-ready access routes briefed by our scouts on
-                request.
+                For privacy, only an approximate area is shown on the map.
+                The exact address is shared by our team after your booking
+                request is confirmed.
               </p>
             </section>
           </div>

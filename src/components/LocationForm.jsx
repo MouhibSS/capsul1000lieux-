@@ -1,6 +1,31 @@
 import { useState, useEffect } from 'react'
 import { filterCategories } from '../data/locations'
 
+// Extract lat/lng from common Google Maps URL formats.
+// Returns { lat, lng } or null. Note: short links (goo.gl/maps/…) cannot
+// be resolved client-side without a network call, so admins should paste
+// the full URL after the page redirects.
+function parseGoogleMapsUrl(input) {
+  if (!input) return null
+  const url = String(input).trim()
+  const patterns = [
+    /@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,            // /@36.85,10.21,17z
+    /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,        // embedded place data
+    /[?&]query=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,   // ?query=lat,lng
+    /[?&]q=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,       // ?q=lat,lng
+    /[?&]ll=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,      // ?ll=lat,lng
+  ]
+  for (const re of patterns) {
+    const m = url.match(re)
+    if (m) {
+      const lat = parseFloat(m[1])
+      const lng = parseFloat(m[2])
+      if (!Number.isNaN(lat) && !Number.isNaN(lng)) return { lat, lng }
+    }
+  }
+  return null
+}
+
 const locationTypes = ['villa', 'loft', 'studio', 'rooftop', 'mansion', 'penthouse', 'industrial']
 const cities = ['Tunis', 'Sidi Bou Said', 'La Marsa', 'Hammamet', 'Sousse', 'Djerba', 'Tozeur', 'Kairouan', 'Tataouine', 'Matmata', 'Carthage', 'Nabeul']
 const architectureStyles = ['tunisian', 'colonial', 'mediterranean', 'brutalist', 'industrial', 'seventies']
@@ -269,6 +294,27 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
       {/* Location */}
       <div>
         <h3 className="text-sm font-light text-on-surface mb-2 uppercase tracking-wide">Location</h3>
+
+        <div className="mb-3">
+          <label className={labelClass}>Google Maps Link</label>
+          <input
+            type="text"
+            onChange={(e) => {
+              const url = e.target.value
+              const coords = parseGoogleMapsUrl(url)
+              if (coords) {
+                set('latitude', String(coords.lat))
+                set('longitude', String(coords.lng))
+              }
+            }}
+            className={inputClass}
+            placeholder="Paste a Google Maps link — coordinates auto-fill"
+          />
+          <p className="text-[10px] text-on-surface-variant mt-1">
+            Paste a maps.google.com or google.com/maps link. The exact coordinates are saved but only an approximate radius is shown publicly until booking is confirmed.
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label className={labelClass}>Latitude *</label>

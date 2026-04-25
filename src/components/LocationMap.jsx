@@ -1,81 +1,87 @@
-import { useEffect, useRef, useState } from 'react'
-import { MapPin, ExternalLink } from 'lucide-react'
+import { useEffect, useRef } from 'react'
+import { MapPin } from 'lucide-react'
 
-// Editorial Mapbox component — dark styled, subtle gold pin.
-// Needs `mapbox-gl` installed (npm i mapbox-gl) and a VITE_MAPBOX_TOKEN
-// in .env. Gracefully degrades to a static card if either is missing,
-// so the page never breaks during local dev.
-
-const TOKEN = import.meta.env.VITE_MAPBOX_TOKEN
-
+/**
+ * LocationMap — privacy-circle map.
+ * Uses Leaflet + OpenStreetMap (free, no API key). Shows a gold circle
+ * around the approximate area instead of the exact pin, so the address
+ * is only revealed after a booking is confirmed.
+ */
 export default function LocationMap({
   latitude,
   longitude,
   label,
   city,
   country = 'Tunisia',
-  height = 420,
-  zoom = 13,
+  height = 460,
+  zoom = 14,
+  radius = 800, // metres — kept large on purpose to obscure the exact spot
 }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
-  const [status, setStatus] = useState('idle') // idle | loading | ready | missing
 
   useEffect(() => {
-    if (!TOKEN) {
-      setStatus('missing')
-      return
-    }
+    if (latitude == null || longitude == null) return
     let cancelled = false
-    setStatus('loading')
 
-    import('mapbox-gl')
-      .then(({ default: mapboxgl }) => {
-        if (cancelled || !containerRef.current) return
-        mapboxgl.accessToken = TOKEN
+    Promise.all([
+      import('leaflet'),
+      import('leaflet/dist/leaflet.css'),
+    ]).then(([{ default: L }]) => {
+      if (cancelled || !containerRef.current) return
 
-        const map = new mapboxgl.Map({
-          container: containerRef.current,
-          style: 'mapbox://styles/mapbox/dark-v11',
-          center: [longitude, latitude],
-          zoom,
-          attributionControl: false,
-          cooperativeGestures: true,
-        })
-        mapRef.current = map
+      // Tear down previous instance (e.g. on prop change / route remount)
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
+      }
 
-        map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right')
-        map.addControl(
-          new mapboxgl.AttributionControl({ compact: true }),
-          'bottom-right'
-        )
-
-        // Editorial gold pin
-        const el = document.createElement('div')
-        el.style.width = '18px'
-        el.style.height = '18px'
-        el.style.borderRadius = '50%'
-        el.style.background = '#C8A96A'
-        el.style.boxShadow = '0 0 0 6px rgba(200,169,106,0.18), 0 0 0 12px rgba(200,169,106,0.08)'
-        el.style.transform = 'translateY(0)'
-        el.style.cursor = 'pointer'
-
-        new mapboxgl.Marker({ element: el, anchor: 'center' })
-          .setLngLat([longitude, latitude])
-          .addTo(map)
-
-        map.on('load', () => {
-          if (!cancelled) setStatus('ready')
-          // Soften land/water tones towards the editorial palette
-          try {
-            map.setPaintProperty('water', 'fill-color', '#0E0E0E')
-            map.setPaintProperty('background', 'background-color', '#0A0A0A')
-          } catch { /* style layer names can vary */ }
-        })
+      const map = L.map(containerRef.current, {
+        center: [latitude, longitude],
+        zoom,
+        zoomControl: true,
+        scrollWheelZoom: false,
+        attributionControl: true,
       })
-      .catch(() => {
-        if (!cancelled) setStatus('missing')
-      })
+      mapRef.current = map
+
+      // CARTO Dark Matter — free OSM tiles, fits the editorial palette
+      L.tileLayer(
+        'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        {
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          subdomains: 'abcd',
+          maxZoom: 19,
+        }
+      ).addTo(map)
+
+      // Privacy radius — a soft gold circle covering the general area
+      L.circle([latitude, longitude], {
+        radius,
+        color: '#C8A96A',
+        weight: 1.5,
+        opacity: 0.9,
+        fillColor: '#C8A96A',
+        fillOpacity: 0.18,
+      }).addTo(map)
+
+      // Inner accent ring
+      L.circle([latitude, longitude], {
+        radius: Math.max(60, radius * 0.18),
+        color: '#E8C98A',
+        weight: 1,
+        opacity: 0.7,
+        fillColor: '#E8C98A',
+        fillOpacity: 0.3,
+      }).addTo(map)
+
+      // Make sure the circle fits comfortably with breathing room
+      map.fitBounds(
+        L.latLng(latitude, longitude).toBounds(radius * 2.6),
+        { padding: [20, 20] }
+      )
+    })
 
     return () => {
       cancelled = true
@@ -84,54 +90,25 @@ export default function LocationMap({
         mapRef.current = null
       }
     }
-  }, [latitude, longitude, zoom])
+  }, [latitude, longitude, zoom, radius])
 
-  const mapboxHref = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`
-
-  if (status === 'missing' || !TOKEN) {
+  if (latitude == null || longitude == null) {
     return (
       <div
-        className="relative overflow-hidden bg-surface-low border border-outline-variant/30"
+        className="relative overflow-hidden bg-surface-low border border-outline-variant/30 flex items-center justify-center"
         style={{ height }}
       >
-        <div
-          className="absolute inset-0 tech-grid opacity-20"
-          style={{ backgroundSize: '32px 32px' }}
-        />
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              'radial-gradient(circle at 50% 50%, rgba(200,169,106,0.08) 0%, transparent 60%)',
-          }}
-        />
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 p-8 text-center">
-          <div className="diamond">
+        <div className="text-center p-8">
+          <div className="diamond mx-auto mb-4">
             <MapPin className="w-5 h-5 text-gold" strokeWidth={1.4} />
           </div>
-          <div>
-            <div className="eyebrow-sm mb-2">Location</div>
-            <div className="font-display text-2xl md:text-3xl font-light text-on-surface">
-              {label || city}
-            </div>
-            <div className="text-on-surface-variant text-sm mt-1 font-mono">
-              {latitude.toFixed(4)}°N · {longitude.toFixed(4)}°E
-            </div>
+          <div className="eyebrow-sm mb-1">Location</div>
+          <div className="font-display text-2xl font-light text-on-surface">
+            {label || city}
           </div>
-          <a
-            href={mapboxHref}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 eyebrow-sm text-gold hover:text-gold-light transition-colors"
-          >
-            Open in maps
-            <ExternalLink className="w-3 h-3" strokeWidth={1.5} />
-          </a>
-        </div>
-        {/* Subtle scan-lines at bottom for editorial feel */}
-        <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between font-mono text-[10px] tracking-[0.3em] uppercase text-on-surface-variant">
-          <span>{city}</span>
-          <span>{country}</span>
+          <div className="text-on-surface-variant text-xs mt-2 font-mono uppercase tracking-widest">
+            Coordinates pending
+          </div>
         </div>
       </div>
     )
@@ -139,24 +116,31 @@ export default function LocationMap({
 
   return (
     <div className="relative overflow-hidden border border-outline-variant/30" style={{ height }}>
-      <div ref={containerRef} className="absolute inset-0" />
-      {status === 'loading' && (
-        <div className="absolute inset-0 flex items-center justify-center bg-surface-low">
-          <div className="eyebrow-sm text-on-surface-variant animate-pulse">
-            Loading map…
-          </div>
+      <div ref={containerRef} className="absolute inset-0 z-0" />
+
+      {/* Top-left badge */}
+      <div className="absolute top-4 left-4 z-[400] pointer-events-none">
+        <div className="bg-bg/70 backdrop-blur-md border border-gold/30 px-3 py-2 flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
+          <span className="font-mono text-[10px] tracking-[0.3em] uppercase text-gold">
+            Approx. area
+          </span>
         </div>
-      )}
+      </div>
+
       {/* Bottom overlay label */}
-      <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between pointer-events-none">
-        <div>
-          <div className="eyebrow-sm text-gold mb-1">Location</div>
-          <div className="font-display text-xl text-on-surface drop-shadow-lg">
+      <div className="absolute bottom-4 left-4 right-4 z-[400] flex items-end justify-between pointer-events-none gap-3">
+        <div className="bg-bg/55 backdrop-blur-md px-3 py-2">
+          <div className="eyebrow-sm text-gold mb-0.5">Location</div>
+          <div className="font-display text-base md:text-lg text-on-surface drop-shadow-lg leading-tight">
             {label || city}
           </div>
+          <div className="text-[10px] text-on-surface-variant mt-0.5 uppercase tracking-widest">
+            {city}, {country}
+          </div>
         </div>
-        <div className="font-mono text-[10px] tracking-[0.3em] uppercase text-on-surface-variant bg-bg/50 backdrop-blur px-3 py-1.5">
-          {latitude.toFixed(4)}°N · {longitude.toFixed(4)}°E
+        <div className="font-mono text-[9px] md:text-[10px] tracking-[0.3em] uppercase text-on-surface-variant bg-bg/55 backdrop-blur-md px-3 py-1.5 whitespace-nowrap">
+          ~ {Math.round(radius)} m radius
         </div>
       </div>
     </div>

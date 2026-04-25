@@ -247,6 +247,7 @@ function TiltPortrait({ src, detailSrc, caption, chapterNum, side = 'left' }) {
 /* ───────────────────── Team member panel ─────────────────────── */
 
 function MemberPanel({ member, index, registerRef }) {
+  const t = useTranslation('about')
   const ref = useRef(null)
   const { scrollYProgress } = useScroll({
     target: ref,
@@ -314,7 +315,7 @@ function MemberPanel({ member, index, registerRef }) {
               className="flex items-center gap-3 mb-5"
             >
               <span className="font-mono text-[10px] tracking-[0.3em] uppercase text-gold/70">
-                Chapter 05 — {String(index + 1).padStart(2, '0')} / 02
+                {t.chapter05ItemPrefix} — {String(index + 1).padStart(2, '0')} / 02
               </span>
               <span className="flex-1 h-px bg-gradient-to-r from-gold/40 to-transparent max-w-[120px]" />
             </motion.div>
@@ -393,8 +394,8 @@ function MemberPanel({ member, index, registerRef }) {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-outline-variant/25 border border-outline-variant/25 mb-8">
               {[
                 { Icon: Clock, label: member.yearsLabel, value: member.years },
-                { Icon: MapPin, label: 'Based', value: member.based },
-                { Icon: Languages, label: 'Speaks', value: member.languages },
+                { Icon: MapPin, label: t.basedLabel, value: member.based },
+                { Icon: Languages, label: t.speaksLabel, value: member.languages },
                 { Icon: Sparkles, label: member.signatureLabel, value: member.signature },
               ].map(({ Icon, label, value }, i) => (
                 <motion.div
@@ -425,7 +426,7 @@ function MemberPanel({ member, index, registerRef }) {
             >
               <div className="absolute -top-2 left-5 right-5 h-5 bg-gold/10 border-x border-gold/20" />
               <p className="font-mono text-[9px] tracking-[0.35em] uppercase text-gold/70 mb-3">
-                Field note
+                {t.fieldNoteLabel}
               </p>
               <p className="text-on-surface text-sm md:text-base font-light italic leading-relaxed">
                 {member.fieldNote}
@@ -461,10 +462,10 @@ export default function About() {
   const tlHeight = useSpring(tlProgress, { stiffness: 60, damping: 20 })
 
   const timeline = [
-    { year: '2022', count: 50, suffix: '', label: 'locations', event: t.timeline2022 },
-    { year: '2023', count: 500, suffix: '+', label: 'spaces vetted', event: t.timeline2023 },
-    { year: '2024', count: 10, suffix: 'K', label: 'productions', event: t.timeline2024 },
-    { year: '2026', count: 24, suffix: '', label: 'governorates', event: t.timeline2026 },
+    { year: '2022', count: 50, suffix: '', label: t.timelineLocations, event: t.timeline2022 },
+    { year: '2023', count: 500, suffix: '+', label: t.timelineSpacesVetted, event: t.timeline2023 },
+    { year: '2024', count: 10, suffix: 'K', label: t.timelineProductions, event: t.timeline2024 },
+    { year: '2026', count: 24, suffix: '', label: t.timelineGovernorates, event: t.timeline2026 },
   ]
 
   const team = [
@@ -472,7 +473,7 @@ export default function About() {
       firstName: 'Neil',
       lastName: 'Attia',
       name: 'Neil Attia',
-      role: 'Co-founder & Head of Scouting',
+      role: t.roleScouting,
       bio1: t.teamMember1Bio1,
       bio2: t.teamMember1Bio2,
       quote: t.teamMember1Quote,
@@ -490,7 +491,7 @@ export default function About() {
       firstName: 'Mouhib',
       lastName: 'Ben Gayes',
       name: 'Mouhib Ben Gayes',
-      role: 'Co-founder & Operations',
+      role: t.roleOperations,
       bio1: t.teamMember2Bio1,
       bio2: t.teamMember2Bio2,
       quote: t.teamMember2Quote,
@@ -514,12 +515,12 @@ export default function About() {
 
   /* ─── Chapter rail observer ─── */
   const chapters = [
-    { id: 'hero', label: '01 — Prologue' },
-    { id: 'origin', label: '02 — Origin' },
-    { id: 'vision', label: '03 — Vision' },
-    { id: 'journey', label: '04 — Journey' },
-    { id: 'team', label: '05 — The Team' },
-    { id: 'outro', label: '06 — Outro' },
+    { id: 'hero', label: t.chapterPrologue },
+    { id: 'origin', label: t.chapterOrigin },
+    { id: 'vision', label: t.chapterVision },
+    { id: 'journey', label: t.chapterJourney },
+    { id: 'team', label: t.chapterTeam },
+    { id: 'outro', label: t.chapterOutro },
   ]
 
   const sectionRefs = useRef({})
@@ -625,7 +626,7 @@ export default function About() {
                     transition={{ duration: 1.1, delay: 0.2, ease }}
                     className="block"
                   >
-                    Every space
+                    {t.heroHeadline1}
                   </motion.span>
                 </span>
                 <span className="block overflow-hidden">
@@ -635,7 +636,7 @@ export default function About() {
                     transition={{ duration: 1.1, delay: 0.35, ease }}
                     className="stroke-text italic font-extralight block"
                   >
-                    tells a
+                    {t.heroHeadline2}
                   </motion.span>
                 </span>
                 <span className="block overflow-hidden">
@@ -645,7 +646,7 @@ export default function About() {
                     transition={{ duration: 1.1, delay: 0.5, ease }}
                     className="text-gold-gradient block"
                   >
-                    story.
+                    {t.heroHeadline3}
                   </motion.span>
                 </span>
               </h1>
@@ -706,7 +707,7 @@ export default function About() {
                 <div className="absolute bottom-5 left-5 w-8 h-8 border-l border-b border-gold/70" />
                 <div className="absolute bottom-5 right-5 w-8 h-8 border-r border-b border-gold/70" />
                 <div className="absolute bottom-6 left-6 font-mono text-[10px] tracking-[0.3em] uppercase text-gold/80">
-                  Sidi Bou Said · 2021
+                  {t.originCaption}
                 </div>
               </div>
             </motion.div>
@@ -724,10 +725,10 @@ export default function About() {
               </motion.div>
 
               <h2 className="font-display font-light text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-[0.95] tracking-display uppercase text-on-surface mb-8 md:mb-10">
-                <RevealText text="It started" />
+                <RevealText text={t.originHeading1} />
                 <br />
                 <span className="stroke-text italic font-extralight">
-                  <RevealText text="with a light." delay={0.15} />
+                  <RevealText text={t.originHeading2} delay={0.15} />
                 </span>
               </h2>
 
@@ -779,13 +780,13 @@ export default function About() {
                 <span className="eyebrow">{t.missionEyebrow}</span>
               </div>
               <h2 className="font-display font-light text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-[0.95] tracking-display uppercase text-on-surface">
-                <RevealText text="Better" />
+                <RevealText text={t.missionHeading1} />
                 <br />
                 <span className="text-gold-gradient italic">
-                  <RevealText text="infrastructure" delay={0.15} />
+                  <RevealText text={t.missionHeading2} delay={0.15} />
                 </span>
                 <br />
-                <RevealText text="for creators." delay={0.3} />
+                <RevealText text={t.missionHeading3} delay={0.3} />
               </h2>
             </div>
 
@@ -849,10 +850,10 @@ export default function About() {
                 <span className="eyebrow">{t.journeyEyebrow}</span>
               </div>
               <h2 className="font-display font-light text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-[0.95] tracking-display uppercase text-on-surface">
-                <RevealText text="How we" />
+                <RevealText text={t.journeyHeading1} />
                 <br />
                 <span className="stroke-text italic font-extralight">
-                  <RevealText text="got here." delay={0.15} />
+                  <RevealText text={t.journeyHeading2} delay={0.15} />
                 </span>
               </h2>
             </div>
@@ -920,10 +921,10 @@ export default function About() {
                 className="font-display font-light leading-[0.9] tracking-display uppercase text-on-surface"
                 style={{ fontSize: 'clamp(2.4rem, 8.5vw, 7.5rem)' }}
               >
-                <RevealText text="The studio," />
+                <RevealText text={t.teamHeading1} />
                 <br />
                 <span className="text-gold-gradient italic font-extralight">
-                  <RevealText text="behind the scenes." delay={0.2} />
+                  <RevealText text={t.teamHeading2} delay={0.2} />
                 </span>
               </h2>
             </div>
@@ -983,10 +984,10 @@ export default function About() {
                 <span className="eyebrow">{t.teamCollectiveEyebrow}</span>
               </motion.div>
               <h3 className="font-display font-light text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-[0.95] tracking-display uppercase text-on-surface mb-8">
-                <RevealText text="Two voices," />
+                <RevealText text={t.collectiveHeading1} />
                 <br />
                 <span className="stroke-text italic font-extralight">
-                  <RevealText text="one index." delay={0.15} />
+                  <RevealText text={t.collectiveHeading2} delay={0.15} />
                 </span>
               </h3>
             </div>
@@ -1002,9 +1003,9 @@ export default function About() {
               </p>
               <div className="grid grid-cols-3 gap-px bg-outline-variant/25 border border-outline-variant/25">
                 {[
-                  { num: 30, suffix: '', label: 'Years combined' },
-                  { num: 5, suffix: '', label: 'Languages' },
-                  { num: 24, suffix: '/24', label: 'Governorates' },
+                  { num: 30, suffix: '', label: t.collectiveYears },
+                  { num: 5, suffix: '', label: t.collectiveLanguages },
+                  { num: 24, suffix: '/24', label: t.collectiveGovernorates },
                 ].map((s) => (
                   <div key={s.label} className="bg-bg/80 backdrop-blur-sm p-5 md:p-6 text-center">
                     <p className="font-display text-3xl md:text-4xl font-extralight text-gold tabular-nums leading-none mb-2">
@@ -1044,13 +1045,13 @@ export default function About() {
             transition={{ duration: 0.9, ease }}
           >
             <p className="font-mono text-[10px] tracking-[0.35em] uppercase text-gold/70 mb-6">
-              Chapter 06 — Outro
+              {t.chapter06Label}
             </p>
             <h2 className="font-display font-light text-3xl sm:text-4xl md:text-6xl lg:text-7xl leading-[0.95] tracking-display uppercase text-on-surface mb-6 md:mb-8">
-              <RevealText text="Ready to" />
+              <RevealText text={t.readyHeading1} />
               <br />
               <span className="text-gold-gradient italic">
-                <RevealText text="explore?" delay={0.15} />
+                <RevealText text={t.readyHeading2} delay={0.15} />
               </span>
             </h2>
             <p className="text-on-surface-variant text-base md:text-lg font-light leading-relaxed mb-10">
@@ -1065,7 +1066,7 @@ export default function About() {
                 />
               </Link>
               <Link to="/list-space" className="btn-ghost">
-                List your space
+                {t.listSpaceLabel}
               </Link>
             </div>
           </motion.div>

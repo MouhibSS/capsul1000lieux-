@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Heart, Menu, X, LogOut, Bell, UserCog, LayoutDashboard, Calendar } from 'lucide-react'
+import { Heart, Menu, X, LogOut, Bell, UserCog, LayoutDashboard, Calendar, Mail } from 'lucide-react'
 import { useFavoritesContext as useFavorites } from '../context/FavoritesContext'
 import { useLanguage, useTranslation } from '../context/LanguageContext'
 import { useAuthContext } from '../context/AuthContext'
 import { useProfile } from '../hooks/useProfile'
 import ProfileCompletionModal from './ProfileCompletionModal'
+import EmailVerificationModal from './EmailVerificationModal'
 
 
 export default function Navbar() {
@@ -14,12 +15,14 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [authMenuOpen, setAuthMenuOpen] = useState(false)
   const [profileModalOpen, setProfileModalOpen] = useState(false)
+  const [emailModalOpen, setEmailModalOpen] = useState(false)
   const { favorites } = useFavorites()
   const { isProfileComplete } = useProfile()
   const { lang, choose } = useLanguage()
   const t = useTranslation('nav')
   const location = useLocation()
   const { user, logout } = useAuthContext()
+  const isEmailVerified = !!user?.email_confirmed_at || !!user?.confirmed_at
 
   const { isAdmin } = useAuthContext()
 
@@ -138,6 +141,25 @@ export default function Navbar() {
                     </span>
                   </button>
                 )}
+                {!isEmailVerified && (
+                  <button
+                    onClick={() => setEmailModalOpen(true)}
+                    className="relative p-2 text-on-surface-variant hover:text-gold transition-colors group"
+                    aria-label="Verify your email"
+                    title="Verify your email"
+                  >
+                    <Mail className="w-4 h-4" strokeWidth={1.5} />
+                    <motion.span
+                      animate={{ scale: [1, 1.5, 1], opacity: [0.8, 0, 0.8] }}
+                      transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut', delay: 0.4 }}
+                      className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-gold"
+                    />
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-gold" />
+                    <span className="absolute top-full right-0 mt-2 px-2.5 py-1.5 text-[10px] font-medium text-on-surface bg-surface-container border border-outline-variant/40 rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap uppercase tracking-wider">
+                      Verify email
+                    </span>
+                  </button>
+                )}
                 <div className="relative">
                   <button
                     onClick={() => setAuthMenuOpen(!authMenuOpen)}
@@ -165,6 +187,16 @@ export default function Navbar() {
                           >
                             <UserCog className="w-4 h-4" strokeWidth={1.5} />
                             Complete profile
+                            <span className="ml-auto w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
+                          </button>
+                        )}
+                        {!isEmailVerified && (
+                          <button
+                            onClick={() => { setEmailModalOpen(true); setAuthMenuOpen(false) }}
+                            className="w-full text-left px-4 py-3 text-sm text-gold hover:bg-gold/10 transition-colors flex items-center gap-2 border-b border-outline-variant/25"
+                          >
+                            <Mail className="w-4 h-4" strokeWidth={1.5} />
+                            Verify email
                             <span className="ml-auto w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
                           </button>
                         )}
@@ -279,6 +311,16 @@ export default function Navbar() {
                   <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
                 </button>
               )}
+              {user && !isEmailVerified && (
+                <button
+                  onClick={() => { setEmailModalOpen(true); setMenuOpen(false) }}
+                  className="inline-flex items-center gap-3 text-gold hover:text-gold-light text-[10px] tracking-[0.35em] uppercase transition-colors"
+                >
+                  <Mail className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  Verify email
+                  <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
+                </button>
+              )}
               {user ? (
                 <button
                   onClick={async () => {
@@ -323,6 +365,11 @@ export default function Navbar() {
         isOpen={profileModalOpen}
         onClose={() => setProfileModalOpen(false)}
         onComplete={() => setProfileModalOpen(false)}
+      />
+
+      <EmailVerificationModal
+        isOpen={emailModalOpen}
+        onClose={() => setEmailModalOpen(false)}
       />
     </>
   )
