@@ -57,9 +57,11 @@ export default function TrendingSection() {
           </motion.div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6 lg:gap-8">
+        <div className="flex sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6 lg:gap-8 -mx-6 sm:mx-0 px-6 sm:px-0 overflow-x-auto sm:overflow-visible snap-x snap-mandatory sm:snap-none no-scrollbar pb-3 sm:pb-0">
           {trending.map((loc, i) => (
-            <LocationCard key={loc.id} location={loc} index={i} />
+            <div key={loc.id} className="snap-start shrink-0 basis-[82%] sm:basis-auto sm:shrink">
+              <LocationCard location={loc} index={i} />
+            </div>
           ))}
         </div>
       </div>

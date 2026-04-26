@@ -163,7 +163,7 @@ export default function Home() {
             </motion.p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="flex md:grid md:grid-cols-3 lg:grid-cols-6 gap-4 -mx-6 md:mx-0 px-6 md:px-0 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none no-scrollbar pb-3 md:pb-0">
             {categories.map((cat, i) => (
               <motion.div
                 key={cat.label}
@@ -171,6 +171,7 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.06, duration: 0.6, ease }}
+                className="snap-start shrink-0 basis-[44%] sm:basis-[32%] md:basis-auto md:shrink"
               >
                 <Link
                   to={`/explore?city=${cat.city}`}
@@ -215,7 +216,7 @@ export default function Home() {
             <span className="w-6 h-px bg-gold" />
             <span className="eyebrow">{t.servicesEyebrow}</span>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-px bg-outline-variant/20 border border-outline-variant/20">
+          <div className="flex md:grid md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-px md:bg-outline-variant/20 md:border md:border-outline-variant/20 -mx-6 md:mx-0 px-6 md:px-0 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none no-scrollbar pb-3 md:pb-0">
             {services.map((s, i) => (
               <motion.div
                 key={s.label}
@@ -223,7 +224,7 @@ export default function Home() {
                 whileInView={{ opacity: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.06, duration: 0.6 }}
-                className="bg-bg/55 backdrop-blur-sm p-5 md:p-6 flex flex-col gap-3 items-start hover:bg-surface-low/70 transition-colors group"
+                className="snap-start shrink-0 basis-[58%] sm:basis-[42%] md:basis-auto md:shrink bg-bg/55 backdrop-blur-sm p-5 md:p-6 flex flex-col gap-3 items-start hover:bg-surface-low/70 transition-colors group border border-outline-variant/20 md:border-0"
               >
                 <s.icon className="w-4 h-4 text-gold" strokeWidth={1.5} />
                 <span className="eyebrow text-on-surface group-hover:text-gold transition-colors">{s.label}</span>
@@ -266,7 +267,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-outline-variant/25 border border-outline-variant/25">
+          <div className="flex md:grid md:grid-cols-2 gap-3 md:gap-px md:bg-outline-variant/25 md:border md:border-outline-variant/25 -mx-6 md:mx-0 px-6 md:px-0 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none no-scrollbar pb-3 md:pb-0">
             {values.map((v, i) => (
               <motion.div
                 key={v.title}
@@ -274,7 +275,7 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.08, duration: 0.7, ease }}
-                className="bg-bg/90 p-6 md:p-10 lg:p-12 group"
+                className="snap-start shrink-0 basis-[80%] sm:basis-[60%] md:basis-auto md:shrink bg-bg/90 p-6 md:p-10 lg:p-12 group border border-outline-variant/25 md:border-0"
               >
                 <div className="flex items-start justify-between mb-6 md:mb-8">
                   <v.icon className="w-4 h-4 text-gold" strokeWidth={1.5} />
