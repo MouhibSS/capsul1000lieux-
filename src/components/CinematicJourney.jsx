@@ -1,8 +1,19 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowUpRight, MapPin, Film, RotateCcw, Sparkles } from 'lucide-react'
 import { useTranslation } from '../context/LanguageContext'
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 640)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)')
+    const handler = (e) => setIsMobile(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+  return isMobile
+}
 
 /**
  * Polaroid Deck — tap-driven postcard interaction.
@@ -69,6 +80,8 @@ export default function CinematicJourney() {
     },
   ], [t])
 
+  const isMobile = useIsMobile()
+
   // order[0] = top of deck; tail = back of deck
   const [order, setOrder] = useState(chapters.map((_, i) => i))
   const [flipped, setFlipped] = useState(false)
@@ -107,142 +120,287 @@ export default function CinematicJourney() {
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/40 to-transparent" />
 
       <div className="container-main relative">
-        <div className="flex items-end justify-between gap-6 mb-8 md:mb-12 flex-wrap">
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-              <Film className="w-3.5 h-3.5 text-gold" strokeWidth={1.6} />
-              <span className="eyebrow text-gold">{t.fieldNotesTitle || 'Polaroid Deck — Vol. 01'}</span>
+        {isMobile ? (
+          <MobileSlideshow chapters={chapters} t={t} />
+        ) : (
+          <>
+            <div className="flex items-end justify-between gap-6 mb-8 md:mb-12 flex-wrap">
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <Film className="w-3.5 h-3.5 text-gold" strokeWidth={1.6} />
+                  <span className="eyebrow text-gold">{t.fieldNotesTitle || 'Polaroid Deck — Vol. 01'}</span>
+                </div>
+                <h2 className="font-display font-light text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[0.92] tracking-display uppercase text-on-surface max-w-3xl">
+                  Tap to <span className="stroke-text italic">turn the</span> postcard
+                </h2>
+                <p className="text-on-surface-variant text-sm md:text-base mt-4 md:mt-5 max-w-md font-light leading-relaxed">
+                  Each postcard hides a story on its back. Tap the card to flip it — tap again or pick another chapter to deal the next.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {chapters.map((c, i) => {
+                  const isTop = order[0] === i
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => jumpTo(i)}
+                      aria-label={`Show ${c.name}`}
+                      className={`relative px-3 py-2 text-[10px] tracking-[0.3em] uppercase border transition-all ${
+                        isTop
+                          ? 'text-bg font-semibold border-transparent'
+                          : 'text-on-surface-variant border-outline-variant/40 hover:text-on-surface hover:border-on-surface-variant'
+                      }`}
+                      style={isTop ? { backgroundColor: c.accent, boxShadow: `0 6px 20px ${c.accent}55` } : {}}
+                    >
+                      {c.index}
+                      {isTop && <motion.span layoutId="chip-active" className="absolute inset-0 -z-10" />}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
-            <h2 className="font-display font-light text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[0.92] tracking-display uppercase text-on-surface max-w-3xl">
-              Tap to <span className="stroke-text italic">turn the</span> postcard
-            </h2>
-            <p className="text-on-surface-variant text-sm md:text-base mt-4 md:mt-5 max-w-md font-light leading-relaxed">
-              Each postcard hides a story on its back. Tap the card to flip it — tap again or pick another chapter to deal the next.
-            </p>
-          </div>
 
-          {/* Chapter chips — tap to jump (no swipe) */}
-          <div className="flex flex-wrap items-center gap-2">
-            {chapters.map((c, i) => {
-              const isTop = order[0] === i
-              return (
-                <button
-                  key={c.id}
-                  onClick={() => jumpTo(i)}
-                  aria-label={`Show ${c.name}`}
-                  className={`relative px-3 py-2 text-[10px] tracking-[0.3em] uppercase border transition-all ${
-                    isTop
-                      ? 'text-bg font-semibold border-transparent'
-                      : 'text-on-surface-variant border-outline-variant/40 hover:text-on-surface hover:border-on-surface-variant'
-                  }`}
-                  style={isTop ? { backgroundColor: c.accent, boxShadow: `0 6px 20px ${c.accent}55` } : {}}
-                >
-                  {c.index}
-                  {isTop && (
-                    <motion.span
-                      layoutId="chip-active"
-                      className="absolute inset-0 -z-10"
+            {/* Deck stage */}
+            <div
+              className="relative mx-auto"
+              style={{
+                perspective: '2400px',
+                perspectiveOrigin: 'center 40%',
+                height: 'clamp(440px, 70vmin, 620px)',
+                maxWidth: '380px',
+              }}
+            >
+              {order
+                .slice()
+                .reverse()
+                .map((chapterIdx, stackPos) => {
+                  const depth = order.length - 1 - stackPos
+                  const c = chapters[chapterIdx]
+                  const isTop = depth === 0
+                  return (
+                    <DeckCard
+                      key={chapterIdx}
+                      chapter={c}
+                      depth={depth}
+                      isTop={isTop}
+                      flipped={isTop && flipped}
+                      onTap={() => {
+                        if (isTop) setFlipped((f) => !f)
+                        else jumpTo(chapterIdx)
+                      }}
+                      enterSpaceText={t.enterSpace || 'Enter the space'}
                     />
-                  )}
+                  )
+                })}
+            </div>
+
+            {/* Controls */}
+            <div className="mt-10 md:mt-12 flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3 text-[10px] tracking-[0.3em] uppercase text-on-surface-variant">
+                <Sparkles className="w-3 h-3 text-gold" strokeWidth={1.8} />
+                <span>{flipped ? 'Tap card to flip back' : 'Tap top card to reveal'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setFlipped((f) => !f)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 text-[10px] tracking-[0.3em] uppercase border border-outline-variant/40 text-on-surface hover:text-gold hover:border-gold transition-colors"
+                >
+                  <RotateCcw className="w-3 h-3" strokeWidth={1.8} />
+                  Flip
                 </button>
-              )
-            })}
-          </div>
-        </div>
+                <button
+                  onClick={cycle}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-[10px] tracking-[0.3em] uppercase font-semibold text-bg transition-colors"
+                  style={{ backgroundColor: top.accent }}
+                >
+                  Next chapter
+                  <ArrowUpRight className="w-3 h-3" strokeWidth={2} />
+                </button>
+              </div>
+            </div>
 
-        {/* Deck stage */}
-        <div
-          className="relative mx-auto"
-          style={{
-            perspective: '1600px',
-            perspectiveOrigin: 'center 35%',
-            height: 'clamp(440px, 70vmin, 620px)',
-            maxWidth: '380px',
-          }}
-        >
-          {/* Stack — render from back to front so top is on top */}
-          {order
-            .slice()
-            .reverse()
-            .map((chapterIdx, stackPos) => {
-              // stackPos: 0 = back-most, last = top
-              const depth = order.length - 1 - stackPos // 0 = top, larger = deeper
-              const c = chapters[chapterIdx]
-              const isTop = depth === 0
-              return (
-                <DeckCard
-                  key={chapterIdx}
-                  chapter={c}
-                  depth={depth}
-                  isTop={isTop}
-                  flipped={isTop && flipped}
-                  onTap={() => {
-                    if (isTop) setFlipped((f) => !f)
-                    else jumpTo(chapterIdx)
-                  }}
-                  enterSpaceText={t.enterSpace || 'Enter the space'}
-                />
-              )
-            })}
-        </div>
-
-        {/* Controls under the deck */}
-        <div className="mt-10 md:mt-12 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3 text-[10px] tracking-[0.3em] uppercase text-on-surface-variant">
-            <Sparkles className="w-3 h-3 text-gold" strokeWidth={1.8} />
-            <span>{flipped ? 'Tap card to flip back' : 'Tap top card to reveal'}</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setFlipped((f) => !f)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 text-[10px] tracking-[0.3em] uppercase border border-outline-variant/40 text-on-surface hover:text-gold hover:border-gold transition-colors"
-            >
-              <RotateCcw className="w-3 h-3" strokeWidth={1.8} />
-              Flip
-            </button>
-            <button
-              onClick={cycle}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-[10px] tracking-[0.3em] uppercase font-semibold text-bg transition-colors"
-              style={{ backgroundColor: top.accent }}
-            >
-              Next chapter
-              <ArrowUpRight className="w-3 h-3" strokeWidth={2} />
-            </button>
-          </div>
-        </div>
-
-        {/* Active card meta */}
-        <div className="mt-8 md:mt-10 flex flex-wrap items-center justify-between gap-3 pt-6 border-t border-outline-variant/20">
-          <div className="flex items-center gap-3 font-mono text-[10px] tracking-[0.3em] uppercase">
-            <span style={{ color: top.accent }}>{top.index}</span>
-            <span className="w-8 h-px bg-outline-variant/50" />
-            <span className="text-on-surface-variant">{String(chapters.length).padStart(2, '0')}</span>
-            <span className="hidden sm:inline-flex items-center gap-2 ml-2 text-on-surface-variant">
-              <MapPin className="w-3 h-3 text-gold" strokeWidth={1.8} />
-              {top.city} · {top.coords}
-            </span>
-          </div>
-          <Link
-            to={`/explore?city=${top.city}`}
-            className="inline-flex items-center gap-3 text-on-surface hover:text-gold text-[10px] tracking-[0.35em] uppercase font-medium transition-colors group"
-          >
-            {t.browseLibrary || 'Browse the library'}
-            <ArrowUpRight className="w-3.5 h-3.5 group-hover:rotate-45 transition-transform duration-500" strokeWidth={1.6} />
-          </Link>
-        </div>
+            {/* Meta */}
+            <div className="mt-8 md:mt-10 flex flex-wrap items-center justify-between gap-3 pt-6 border-t border-outline-variant/20">
+              <div className="flex items-center gap-3 font-mono text-[10px] tracking-[0.3em] uppercase">
+                <span style={{ color: top.accent }}>{top.index}</span>
+                <span className="w-8 h-px bg-outline-variant/50" />
+                <span className="text-on-surface-variant">{String(chapters.length).padStart(2, '0')}</span>
+                <span className="hidden sm:inline-flex items-center gap-2 ml-2 text-on-surface-variant">
+                  <MapPin className="w-3 h-3 text-gold" strokeWidth={1.8} />
+                  {top.city} · {top.coords}
+                </span>
+              </div>
+              <Link
+                to={`/explore?city=${top.city}`}
+                className="inline-flex items-center gap-3 text-on-surface hover:text-gold text-[10px] tracking-[0.35em] uppercase font-medium transition-colors group"
+              >
+                {t.browseLibrary || 'Browse the library'}
+                <ArrowUpRight className="w-3.5 h-3.5 group-hover:rotate-45 transition-transform duration-500" strokeWidth={1.6} />
+              </Link>
+            </div>
+          </>
+        )}
       </div>
     </section>
   )
 }
 
+function MobileSlideshow({ chapters, t }) {
+  const [active, setActive] = useState(0)
+  const [prev, setPrev] = useState(null)
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPrev(active)
+      setActive((a) => (a + 1) % chapters.length)
+    }, 3800)
+    return () => clearInterval(timer)
+  }, [active, chapters.length])
+
+  const chapter = chapters[active]
+
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-5">
+        <Film className="w-3.5 h-3.5 text-gold" strokeWidth={1.6} />
+        <span className="eyebrow text-gold">{t.fieldNotesTitle || 'Polaroid Deck — Vol. 01'}</span>
+      </div>
+
+      {/* Slideshow card */}
+      <div className="relative overflow-hidden rounded-sm" style={{ height: 'clamp(420px, 80vw, 560px)' }}>
+        <AnimatePresence mode="sync">
+          {chapters.map((c, i) =>
+            i === active ? (
+              <motion.div
+                key={c.id}
+                initial={{ opacity: 0, scale: 1.04 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.97 }}
+                transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+                className="absolute inset-0"
+              >
+                {/* Image */}
+                <img
+                  src={c.image}
+                  alt={c.name}
+                  draggable={false}
+                  className="absolute inset-0 w-full h-full object-cover img-mono"
+                />
+                {/* Gradient overlays */}
+                <div className="absolute inset-0 bg-gradient-to-t from-bg/85 via-bg/30 to-transparent" />
+                <div
+                  className="absolute inset-0 opacity-50 mix-blend-overlay pointer-events-none"
+                  style={{ background: `radial-gradient(ellipse at top, ${c.accent}55 0%, transparent 65%)` }}
+                />
+                {/* Bottom glow from accent */}
+                <div
+                  className="absolute inset-x-0 bottom-0 h-48 pointer-events-none"
+                  style={{ background: `linear-gradient(to top, ${c.accent}22, transparent)` }}
+                />
+
+                {/* Stamp */}
+                <div
+                  className="absolute top-4 right-4 px-2 py-1 border-2 rotate-3"
+                  style={{ borderColor: `${c.accent}aa`, color: c.accent }}
+                >
+                  <span className="block text-[8px] font-mono tracking-[0.25em] uppercase">{c.stamp}</span>
+                  <span className="block text-[7px] font-mono tracking-[0.2em] opacity-70">216 000</span>
+                </div>
+
+                {/* Coords */}
+                <div className="absolute top-4 left-4 flex items-center gap-2 px-2.5 py-1 rounded-full bg-bg/65 backdrop-blur border border-outline-variant/30">
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: c.accent, boxShadow: `0 0 8px ${c.accent}` }} />
+                  <span className="font-mono text-[9px] tracking-[0.25em] text-on-surface-variant">{c.coords}</span>
+                </div>
+
+                {/* Corner brackets */}
+                {['top-3 left-3 border-l border-t', 'top-3 right-3 border-r border-t', 'bottom-3 left-3 border-l border-b', 'bottom-3 right-3 border-r border-b'].map((cls, j) => (
+                  <span key={j} className={`absolute w-3 h-3 ${cls}`} style={{ borderColor: `${c.accent}aa` }} />
+                ))}
+
+                {/* Footer info */}
+                <div className="absolute inset-x-0 bottom-0 p-5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-[9px] tracking-[0.35em] uppercase font-medium" style={{ color: c.accent }}>
+                      {c.region}
+                    </span>
+                    <span className="w-5 h-px" style={{ background: `${c.accent}80` }} />
+                    <span className="font-mono text-[9px] tracking-[0.2em] text-on-surface-variant uppercase">{c.index}</span>
+                  </div>
+                  <h3 className="font-display font-light text-3xl text-on-surface uppercase tracking-display leading-[0.95] mb-1">
+                    {c.name}
+                  </h3>
+                  <p className="font-display italic font-extralight text-base" style={{ color: c.accent }}>
+                    {c.subtitle}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mt-3">
+                    {c.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="px-2 py-0.5 text-[9px] tracking-[0.18em] uppercase border rounded-full"
+                        style={{ borderColor: `${c.accent}55`, color: c.accent }}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            ) : null
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Progress bar + dots */}
+      <div className="mt-4 flex items-center gap-3">
+        {chapters.map((c, i) => (
+          <button
+            key={c.id}
+            onClick={() => { setPrev(active); setActive(i) }}
+            className="relative flex-1 h-px bg-outline-variant/30 overflow-hidden"
+          >
+            {i === active && (
+              <motion.span
+                key={`bar-${active}`}
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ duration: 3.8, ease: 'linear' }}
+                className="absolute inset-0 origin-left"
+                style={{ background: c.accent }}
+              />
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Meta + explore link */}
+      <div className="mt-5 flex items-center justify-between gap-3 pt-5 border-t border-outline-variant/20">
+        <div className="flex items-center gap-2 font-mono text-[10px] tracking-[0.3em] uppercase">
+          <span style={{ color: chapter.accent }}>{chapter.index}</span>
+          <span className="w-6 h-px bg-outline-variant/50" />
+          <span className="text-on-surface-variant">{String(chapters.length).padStart(2, '0')}</span>
+        </div>
+        <Link
+          to={`/explore?city=${chapter.city}`}
+          className="inline-flex items-center gap-2 text-[10px] tracking-[0.35em] uppercase font-medium transition-colors group"
+          style={{ color: chapter.accent }}
+        >
+          {t.browseLibrary || 'Browse the library'}
+          <ArrowUpRight className="w-3 h-3 group-hover:rotate-45 transition-transform duration-500" strokeWidth={1.6} />
+        </Link>
+      </div>
+    </div>
+  )
+}
+
 function DeckCard({ chapter, depth, isTop, flipped, onTap, enterSpaceText }) {
-  // Behind cards fan out with offset/rotation/scale
-  const offsetY = depth * 14
-  const offsetX = depth * 10 * (depth % 2 === 0 ? 1 : -1)
-  const tilt = depth * (depth % 2 === 0 ? -3 : 3)
-  const scale = 1 - depth * 0.05
-  const z = -depth * 30
+  // Behind cards fan out with subtle offset/rotation/scale
+  const offsetY = depth * 7
+  const offsetX = depth * 5 * (depth % 2 === 0 ? 1 : -1)
+  const tilt = depth * (depth % 2 === 0 ? -1.5 : 1.5)
+  const scale = 1 - depth * 0.03
+  const z = -depth * 12
 
   return (
     <motion.button

@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { motion, useScroll, useTransform } from 'framer-motion'
-import { Mail, MessageSquare, Send, Check, MapPin, Clock } from 'lucide-react'
+import { Mail, MessageSquare, Send, Check, MapPin, Clock, Loader2 } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 const ease = [0.22, 1, 0.36, 1]
 
@@ -22,19 +23,43 @@ const contactPoints = [
 export default function Contact() {
   const [searchParams] = useSearchParams()
   const [sent, setSent] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
   const [form, setForm] = useState({ name: '', email: '', reason: '', message: '' })
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
 
   useEffect(() => {
     const type = searchParams.get('type')
-    if (type === 'support') {
-      set('reason', 'Support')
-    }
+    if (type === 'support') set('reason', 'Support')
   }, [])
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    setSent(true)
+    if (!form.reason) { setError('Please select a reason.'); return }
+    setSubmitting(true)
+    setError('')
+    try {
+      const { error: dbErr } = await supabase.from('contact_messages').insert({
+        name: form.name,
+        email: form.email,
+        reason: form.reason,
+        message: form.message,
+        status: 'unread',
+      })
+      if (dbErr) throw dbErr
+
+      await fetch('http://localhost:3001/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      }).catch(() => {})
+
+      setSent(true)
+    } catch (err) {
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const headerRef = useRef(null)
@@ -214,9 +239,15 @@ export default function Contact() {
                     />
                   </div>
 
-                  <button type="submit" className="btn-primary w-full justify-center">
-                    <Send className="w-3.5 h-3.5" strokeWidth={1.8} />
-                    Send message
+                  {error && (
+                    <p className="text-red-400 text-xs font-light">{error}</p>
+                  )}
+                  <button type="submit" disabled={submitting} className="btn-primary w-full justify-center disabled:opacity-50">
+                    {submitting
+                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={1.8} />
+                      : <Send className="w-3.5 h-3.5" strokeWidth={1.8} />
+                    }
+                    {submitting ? 'Sending…' : 'Send message'}
                   </button>
                 </form>
               )}

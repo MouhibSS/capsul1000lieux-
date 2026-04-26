@@ -1,21 +1,24 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, Link } from 'react-router-dom'
 import {
   BarChart3, MapPin, Settings, Calendar, LogOut, Heart, Search, Bell, ExternalLink, Sparkles,
-  Power, AlertTriangle, ShieldCheck, X, Eye, Info, Check, Menu,
+  Power, AlertTriangle, ShieldCheck, X, Eye, Info, Check, Menu, MessageSquare,
 } from 'lucide-react'
 import { useAuthContext } from '../context/AuthContext'
 import { useMaintenanceContext } from '../context/MaintenanceContext'
+import { supabase } from '../lib/supabase'
 import AdminLocations from '../sections/AdminLocations'
 import AdminFilters from '../sections/AdminFilters'
 import AdminBookings from '../sections/AdminBookings'
 import AdminAnalytics from '../sections/AdminAnalytics'
 import AdminFavorites from '../sections/AdminFavorites'
+import AdminMessages from '../sections/AdminMessages'
 
 const tabs = [
   { id: 'locations', label: 'Locations', icon: MapPin, desc: 'Manage listed spaces', accent: 'from-blue-500/20 to-cyan-500/10', dot: 'bg-blue-400' },
   { id: 'bookings', label: 'Bookings', icon: Calendar, desc: 'Requests & status', accent: 'from-orange-500/20 to-red-500/10', dot: 'bg-orange-400' },
+  { id: 'messages', label: 'Messages', icon: MessageSquare, desc: 'Contact & support inbox', accent: 'from-gold/20 to-amber-500/10', dot: 'bg-gold' },
   { id: 'favorites', label: 'Favorites', icon: Heart, desc: 'User wishlist analytics', accent: 'from-pink-500/20 to-rose-500/10', dot: 'bg-pink-400' },
   { id: 'filters', label: 'Filters', icon: Settings, desc: 'Category management', accent: 'from-purple-500/20 to-violet-500/10', dot: 'bg-purple-400' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, desc: 'Performance overview', accent: 'from-emerald-500/20 to-green-500/10', dot: 'bg-emerald-400' },
@@ -30,6 +33,8 @@ export default function AdminDashboard() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const navigate = useNavigate()
   const [toast, setToast] = useState(null)
+  const [unreadMsgs, setUnreadMsgs] = useState(0)
+  const [newMsgFlash, setNewMsgFlash] = useState(false)
   const { user, logout } = useAuthContext()
   const { maintenanceMode, toggle: toggleMaintenance, clearBypass } = useMaintenanceContext()
 
@@ -47,6 +52,27 @@ export default function AdminDashboard() {
   useEffect(() => {
     document.body.classList.add('dashboard-active')
     return () => document.body.classList.remove('dashboard-active')
+  }, [])
+
+  // Fetch initial unread count + subscribe to new messages
+  useEffect(() => {
+    supabase
+      .from('contact_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'unread')
+      .then(({ count }) => setUnreadMsgs(count || 0))
+
+    const channel = supabase
+      .channel('contact_messages_inserts')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'contact_messages' }, () => {
+        setUnreadMsgs((n) => n + 1)
+        setNewMsgFlash(true)
+        setTimeout(() => setNewMsgFlash(false), 3000)
+        showToast('New contact message received', 'success')
+      })
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
   }, [])
 
   const handleLogout = async () => { await logout(); navigate('/') }
@@ -131,7 +157,7 @@ export default function AdminDashboard() {
             return (
               <button
                 key={tab.id}
-                onClick={() => { setActiveTab(tab.id); setDrawerOpen(false) }}
+                onClick={() => { setActiveTab(tab.id); setDrawerOpen(false); if (tab.id === 'messages') setUnreadMsgs(0) }}
                 className={`relative w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left transition-all ${
                   isActive
                     ? 'bg-white/[0.06] text-on-surface'
@@ -224,9 +250,22 @@ export default function AdminDashboard() {
                 <ExternalLink className="w-3 h-3" strokeWidth={2} />
                 <span className="hidden sm:inline">View site</span>
               </a>
-              <button className="relative p-2 text-on-surface-variant hover:text-on-surface bg-white/[0.03] hover:bg-white/[0.06] rounded-lg transition-colors">
-                <Bell className="w-3.5 h-3.5" strokeWidth={1.75} />
-                <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-gold" />
+              <button
+                onClick={() => { setActiveTab('messages'); setUnreadMsgs(0) }}
+                className={`relative p-2 bg-white/[0.03] hover:bg-white/[0.06] rounded-lg transition-colors ${newMsgFlash ? 'text-gold' : 'text-on-surface-variant hover:text-on-surface'}`}
+              >
+                <motion.div animate={newMsgFlash ? { rotate: [0, -15, 15, -10, 10, 0] } : {}} transition={{ duration: 0.5 }}>
+                  <Bell className="w-3.5 h-3.5" strokeWidth={1.75} />
+                </motion.div>
+                {unreadMsgs > 0 && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-gold text-bg text-[9px] font-bold flex items-center justify-center leading-none"
+                  >
+                    {unreadMsgs > 99 ? '99+' : unreadMsgs}
+                  </motion.span>
+                )}
               </button>
 
               {/* Emergency Maintenance Button */}
@@ -297,6 +336,7 @@ export default function AdminDashboard() {
               {activeTab === 'bookings' && <AdminBookings />}
               {activeTab === 'analytics' && <AdminAnalytics />}
               {activeTab === 'favorites' && <AdminFavorites />}
+              {activeTab === 'messages' && <AdminMessages />}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -311,7 +351,7 @@ export default function AdminDashboard() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => { setActiveTab(tab.id); if (tab.id === 'messages') setUnreadMsgs(0) }}
                 className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 transition-colors ${
                   isActive ? 'text-gold' : 'text-on-surface-variant hover:text-on-surface'
                 }`}
