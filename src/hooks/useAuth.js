@@ -4,16 +4,40 @@ import { supabase } from '../lib/supabase'
 export function useAuth() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  // Check admin status without blocking. Runs in background, fails silently.
+  const checkAdminStatus = (currentUser) => {
+    if (!currentUser) { setIsAdmin(false); return }
+    supabase
+      .from('admins')
+      .select('user_id')
+      .eq('user_id', currentUser.id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) {
+          console.warn('[useAuth] admin lookup failed (non-fatal):', error.message)
+          setIsAdmin(false)
+          return
+        }
+        setIsAdmin(!!data)
+      })
+      .catch((err) => {
+        console.warn('[useAuth] admin lookup error (non-fatal):', err)
+        setIsAdmin(false)
+      })
+  }
 
   useEffect(() => {
     const checkUser = async () => {
       try {
-        // Try to restore session from localStorage
         const { data: { session } } = await supabase.auth.getSession()
-        setUser(session?.user || null)
-        setLoading(false)
+        const u = session?.user || null
+        setUser(u)
+        checkAdminStatus(u) // fire-and-forget — never blocks loading
       } catch (error) {
         console.error('Auth check error:', error)
+      } finally {
         setLoading(false)
       }
     }
@@ -21,8 +45,9 @@ export function useAuth() {
     checkUser()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user || null)
-      // Persist session to localStorage
+      const u = session?.user || null
+      setUser(u)
+      checkAdminStatus(u)
       if (session) {
         localStorage.setItem('auth_token', JSON.stringify({
           access_token: session.access_token,
@@ -61,8 +86,6 @@ export function useAuth() {
     }
     return data
   }
-
-  const isAdmin = user?.user_metadata?.user_role === 'admin'
 
   return { user, loading, login, logout, signUp, isAdmin }
 }
