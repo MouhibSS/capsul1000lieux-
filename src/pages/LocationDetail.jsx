@@ -555,7 +555,7 @@ export default function LocationDetail() {
                 label={location.name}
                 city={location.city}
                 country={location.country}
-                height={460}
+                height="clamp(360px, 55vh, 600px)"
                 zoom={14}
                 radius={1000}
               />

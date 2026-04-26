@@ -385,13 +385,13 @@ export default function AdminBookings() {
                       onClick={() => showToast('Email sent (simulation)')}
                       className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border border-outline-variant/40 text-on-surface-variant hover:text-gold hover:border-gold transition-colors"
                     >
-                      <Mail className="w-3.5 h-3.5" strokeWidth={1.5} /> Resend Email
+                      <Mail className="w-3.5 h-3.5" strokeWidth={1.5} /> Send Confirmatio Email
                     </button>
                     <button
                       onClick={() => showToast('SMS sent (simulation)')}
                       className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border border-outline-variant/40 text-on-surface-variant hover:text-gold hover:border-gold transition-colors"
                     >
-                      <Phone className="w-3.5 h-3.5" strokeWidth={1.5} /> Resend SMS
+                      <Phone className="w-3.5 h-3.5" strokeWidth={1.5} /> Send Confirmation SMS
                     </button>
                   </div>
                 </div>

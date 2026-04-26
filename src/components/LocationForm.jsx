@@ -1,29 +1,49 @@
 import { useState, useEffect } from 'react'
 import { filterCategories } from '../data/locations'
 
-// Extract lat/lng from common Google Maps URL formats.
-// Returns { lat, lng } or null. Note: short links (goo.gl/maps/…) cannot
-// be resolved client-side without a network call, so admins should paste
-// the full URL after the page redirects.
+// Extract lat/lng from a Google Maps URL or raw "lat, lng" paste.
+// Short links (maps.app.goo.gl, goo.gl/maps) cannot be resolved
+// client-side — admin must open them and paste the resulting full URL.
 function parseGoogleMapsUrl(input) {
   if (!input) return null
-  const url = String(input).trim()
+  const raw = String(input).trim()
+  if (!raw) return null
+
+  // Raw "lat, lng" or "lat lng"
+  const rawCoords = raw.match(/^\s*(-?\d{1,3}(?:\.\d+)?)[,\s]+(-?\d{1,3}(?:\.\d+)?)\s*$/)
+  if (rawCoords) {
+    const lat = parseFloat(rawCoords[1])
+    const lng = parseFloat(rawCoords[2])
+    if (Number.isFinite(lat) && Number.isFinite(lng) &&
+        Math.abs(lat) <= 90 && Math.abs(lng) <= 180) return { lat, lng }
+  }
+
   const patterns = [
+    /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,        // embedded place data (preferred)
+    /!8m2!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,    // newer place data
     /@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,            // /@36.85,10.21,17z
-    /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,        // embedded place data
-    /[?&]query=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,   // ?query=lat,lng
-    /[?&]q=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,       // ?q=lat,lng
-    /[?&]ll=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,      // ?ll=lat,lng
+    /[?&]query=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /[?&]q=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /[?&]q=loc:(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /[?&]ll=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /[?&]center=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /[?&]destination=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /\/place\/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
   ]
   for (const re of patterns) {
-    const m = url.match(re)
+    const m = raw.match(re)
     if (m) {
       const lat = parseFloat(m[1])
       const lng = parseFloat(m[2])
-      if (!Number.isNaN(lat) && !Number.isNaN(lng)) return { lat, lng }
+      if (Number.isFinite(lat) && Number.isFinite(lng) &&
+          Math.abs(lat) <= 90 && Math.abs(lng) <= 180) return { lat, lng }
     }
   }
   return null
+}
+
+function isShortMapsLink(input) {
+  return /^https?:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(String(input).trim())
 }
 
 const locationTypes = ['villa', 'loft', 'studio', 'rooftop', 'mansion', 'penthouse', 'industrial']
@@ -75,7 +95,7 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
     image_urls: '',
     featured: false,
     trending: false,
-    published: false,
+    status: 'draft', // 'draft' | 'published' | 'archived'
     specs: '{}',
     fallback: '',
     place_type_path: [],
@@ -84,6 +104,10 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
 
   const [form, setForm] = useState(emptyForm)
   const [errors, setErrors] = useState({})
+  const [mapsUrl, setMapsUrl] = useState('')
+  const [mapsHint, setMapsHint] = useState(null) // { type: 'ok'|'warn'|'error', msg: string }
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState(null)
   const placeTypePaths = getPlaceTypePaths()
 
   useEffect(() => {
@@ -107,7 +131,11 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
         image_urls: Array.isArray(initialData.image_urls) ? initialData.image_urls.join(', ') : initialData.image_urls || '',
         featured: Boolean(initialData.featured),
         trending: Boolean(initialData.trending),
-        published: Boolean(initialData.published),
+        status: initialData.archived
+          ? 'archived'
+          : initialData.published
+          ? 'published'
+          : 'draft',
         specs: initialData.specs ? JSON.stringify(initialData.specs) : '{}',
         fallback: initialData.fallback || '',
         place_type_path: Array.isArray(initialData.place_type_path) ? initialData.place_type_path : [],
@@ -116,28 +144,81 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
     } else {
       setForm(emptyForm)
     }
+    setMapsUrl('')
+    setMapsHint(null)
+    setErrors({})
+    setSubmitError(null)
   }, [initialData])
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const applyCoords = (coords) => {
+    set('latitude', String(coords.lat))
+    set('longitude', String(coords.lng))
+    setErrors(prev => ({ ...prev, latitude: undefined, longitude: undefined }))
+    setMapsHint({
+      type: 'ok',
+      msg: `✓ Coordinates extracted: ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`,
+    })
+  }
+
+  const handleMapsInput = (raw) => {
+    setMapsUrl(raw)
+    if (!raw || !raw.trim()) { setMapsHint(null); return }
+
+    const coords = parseGoogleMapsUrl(raw)
+    if (coords) { applyCoords(coords); return }
+
+    if (isShortMapsLink(raw)) {
+      setMapsHint({
+        type: 'warn',
+        msg: 'Short link — open it in your browser, then copy the FULL URL from the address bar (after the map loads) and paste it here.',
+      })
+      return
+    }
+
+    setMapsHint({
+      type: 'warn',
+      msg: 'No coordinates found. Paste a full Google Maps URL or raw "36.85, 10.21".',
+    })
+  }
 
   const validateForm = () => {
     const newErrors = {}
     if (!form.name) newErrors.name = 'Name is required'
     if (!form.city) newErrors.city = 'City is required'
     if (!form.type) newErrors.type = 'Type is required'
-    if (!form.price) newErrors.price = 'Price is required'
-    if (!form.latitude) newErrors.latitude = 'Latitude is required'
-    if (!form.longitude) newErrors.longitude = 'Longitude is required'
+    if (form.price === '' || form.price === null || form.price === undefined) newErrors.price = 'Price is required'
+    if (form.latitude === '' || form.latitude === null || form.latitude === undefined) newErrors.latitude = 'Latitude is required'
+    if (form.longitude === '' || form.longitude === null || form.longitude === undefined) newErrors.longitude = 'Longitude is required'
     setErrors(newErrors)
+    if (Object.keys(newErrors).length > 0) {
+      console.warn('[LocationForm] Validation failed:', newErrors, '— current form:', form)
+      setSubmitError('Please fill the highlighted required fields.')
+    }
     return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setSubmitError(null)
     if (!validateForm()) return
 
+    // Parse specs safely
+    let specs = {}
+    if (form.specs && form.specs.trim()) {
+      try {
+        specs = JSON.parse(form.specs)
+      } catch {
+        setErrors(prev => ({ ...prev, specs: 'Invalid JSON' }))
+        setSubmitError('Specs JSON is invalid. Fix or clear it before saving.')
+        return
+      }
+    }
+
+    // Build payload. Optional columns (archived/place_type_path/architecture_style)
+    // may not exist in older schemas — they get auto-stripped on retry below.
     const data = {
-      ...(initialData?.id && { id: initialData.id }),
       name: form.name,
       city: form.city,
       country: 'Tunisia',
@@ -156,13 +237,48 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
       image_urls: form.image_urls ? form.image_urls.split(',').map(u => u.trim()).filter(Boolean) : [],
       featured: form.featured,
       trending: form.trending,
-      published: form.published,
-      specs: form.specs ? JSON.parse(form.specs) : {},
+      published: form.status === 'published',
+      archived: form.status === 'archived',
+      specs,
       fallback: form.fallback,
       place_type_path: form.place_type_path && form.place_type_path.length > 0 ? form.place_type_path : null,
       architecture_style: form.architecture_style || null,
     }
-    onSubmit(data)
+
+    console.log('[LocationForm] Submitting payload:', data)
+
+    // Auto-retry without optional columns if schema doesn't have them yet.
+    const optional = ['archived', 'place_type_path', 'architecture_style']
+
+    const attempt = async (payload) => {
+      try {
+        setSubmitting(true)
+        await onSubmit(payload)
+      } catch (err) {
+        console.error('[LocationForm] Save error:', err)
+        // PGRST204 = column not in schema cache
+        if (err?.code === 'PGRST204' && err?.message) {
+          for (const col of optional) {
+            if (col in payload && err.message.includes(`'${col}'`)) {
+              console.warn(`[LocationForm] Column '${col}' missing — retrying without it.`)
+              const { [col]: _drop, ...rest } = payload
+              return attempt(rest)
+            }
+          }
+        }
+        const parts = [err?.message, err?.details, err?.hint, err?.code ? `(${err.code})` : null].filter(Boolean)
+        setSubmitError(parts.length ? parts.join(' · ') : 'Failed to save. Please try again.')
+        throw err
+      }
+    }
+
+    try {
+      await attempt(data)
+    } catch {
+      // already logged + shown
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const inputClass = 'w-full px-3 py-2 bg-surface-low border border-outline-variant/30 rounded text-on-surface outline-none focus:border-gold transition-colors text-sm'
@@ -296,22 +412,44 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
         <h3 className="text-sm font-light text-on-surface mb-2 uppercase tracking-wide">Location</h3>
 
         <div className="mb-3">
-          <label className={labelClass}>Google Maps Link</label>
-          <input
-            type="text"
-            onChange={(e) => {
-              const url = e.target.value
-              const coords = parseGoogleMapsUrl(url)
-              if (coords) {
-                set('latitude', String(coords.lat))
-                set('longitude', String(coords.lng))
-              }
-            }}
-            className={inputClass}
-            placeholder="Paste a Google Maps link — coordinates auto-fill"
-          />
+          <label className={labelClass}>Google Maps Link or Coords</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={mapsUrl}
+              onChange={(e) => handleMapsInput(e.target.value)}
+              onPaste={(e) => {
+                const text = e.clipboardData?.getData('text') || ''
+                if (text) {
+                  e.preventDefault()
+                  handleMapsInput(text)
+                }
+              }}
+              className={`${inputClass} flex-1`}
+              placeholder='Paste full maps URL or "36.85, 10.21"'
+            />
+            {isShortMapsLink(mapsUrl) && (
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-2 text-xs bg-gold/20 hover:bg-gold/30 border border-gold/40 text-gold rounded transition-colors whitespace-nowrap"
+                title="Open this link to get the full URL"
+              >
+                Open ↗
+              </a>
+            )}
+          </div>
+          {mapsHint && (
+            <p className={`text-[11px] mt-1 ${
+              mapsHint.type === 'ok' ? 'text-emerald-400' :
+              mapsHint.type === 'error' ? 'text-red-400' : 'text-amber-400'
+            }`}>
+              {mapsHint.msg}
+            </p>
+          )}
           <p className="text-[10px] text-on-surface-variant mt-1">
-            Paste a maps.google.com or google.com/maps link. The exact coordinates are saved but only an approximate radius is shown publicly until booking is confirmed.
+            On Google Maps: right-click the spot → click the coordinates to copy "lat, lng", paste here. Or share → "Copy link" using a desktop browser to get the long URL.
           </p>
         </div>
 
@@ -382,16 +520,55 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
         <label className={labelClass}>Specs (JSON)</label>
         <textarea
           value={form.specs}
-          onChange={(e) => set('specs', e.target.value)}
-          className={`${inputClass} resize-none h-14 font-mono text-xs`}
+          onChange={(e) => {
+            set('specs', e.target.value)
+            if (errors.specs) setErrors(prev => ({ ...prev, specs: undefined }))
+          }}
+          className={`${inputClass} resize-none h-14 font-mono text-xs ${errors.specs ? 'border-red-500' : ''}`}
           placeholder='{"rooms": 6, "bathrooms": 4}'
         />
+        {errors.specs && <p className="text-red-400 text-xs mt-0.5">{errors.specs}</p>}
       </div>
 
       {/* Status */}
       <div>
-        <h3 className="text-sm font-light text-on-surface mb-2 uppercase tracking-wide">Status</h3>
-        <div className="space-y-2">
+        <h3 className="text-sm font-light text-on-surface mb-2 uppercase tracking-wide">Visibility</h3>
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          {[
+            { value: 'draft', label: 'Draft', hint: 'Hidden from site', tone: 'amber' },
+            { value: 'published', label: 'Published', hint: 'Live on the site', tone: 'emerald' },
+            { value: 'archived', label: 'Archived', hint: 'Hidden + retained', tone: 'zinc' },
+          ].map(opt => {
+            const active = form.status === opt.value
+            const ring =
+              opt.tone === 'emerald' ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-300'
+              : opt.tone === 'amber' ? 'border-amber-500/60 bg-amber-500/15 text-amber-300'
+              : 'border-zinc-500/60 bg-zinc-500/15 text-zinc-300'
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => set('status', opt.value)}
+                className={`px-3 py-2 rounded border text-xs font-medium transition-all text-left ${
+                  active ? ring : 'border-outline-variant/30 bg-surface-low text-on-surface-variant hover:border-outline-variant/60'
+                }`}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    opt.tone === 'emerald' ? 'bg-emerald-400'
+                    : opt.tone === 'amber' ? 'bg-amber-400'
+                    : 'bg-zinc-400'
+                  }`} />
+                  {opt.label}
+                </div>
+                <div className="text-[10px] opacity-70 mt-0.5 font-normal">{opt.hint}</div>
+              </button>
+            )
+          })}
+        </div>
+
+        <h3 className="text-sm font-light text-on-surface mb-2 uppercase tracking-wide">Highlights</h3>
+        <div className="flex gap-4">
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={form.featured} onChange={(e) => set('featured', e.target.checked)} className="w-3 h-3 rounded" />
             <span className="text-xs text-on-surface">Featured</span>
@@ -400,25 +577,32 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
             <input type="checkbox" checked={form.trending} onChange={(e) => set('trending', e.target.checked)} className="w-3 h-3 rounded" />
             <span className="text-xs text-on-surface">Trending</span>
           </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={form.published} onChange={(e) => set('published', e.target.checked)} className="w-3 h-3 rounded" />
-            <span className="text-xs text-on-surface">Published</span>
-          </label>
         </div>
       </div>
+
+      {/* Submit error banner */}
+      {submitError && (
+        <div className="sticky bottom-0 p-3 bg-red-500/15 border-2 border-red-500/50 rounded text-sm text-red-200 shadow-lg">
+          <div className="font-medium mb-1">Save failed</div>
+          <div className="text-xs text-red-300/90 break-words">{submitError}</div>
+          <div className="text-[10px] text-red-300/60 mt-1.5">Open the browser console for full details.</div>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex gap-3 pt-4 border-t border-outline-variant/25">
         <button
           type="submit"
-          className="px-4 py-1.5 text-sm bg-gold text-bg font-medium rounded hover:bg-gold-light transition-colors"
+          disabled={submitting}
+          className="px-4 py-1.5 text-sm bg-gold text-bg font-medium rounded hover:bg-gold-light disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          {initialData ? 'Update' : 'Create'}
+          {submitting ? 'Saving…' : initialData ? 'Update' : 'Create'}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-1.5 text-sm border border-outline-variant/40 text-on-surface-variant font-medium rounded hover:bg-surface-low transition-colors"
+          disabled={submitting}
+          className="px-4 py-1.5 text-sm border border-outline-variant/40 text-on-surface-variant font-medium rounded hover:bg-surface-low disabled:opacity-50 transition-colors"
         >
           Cancel
         </button>

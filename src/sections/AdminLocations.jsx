@@ -4,10 +4,23 @@ import { Plus, Edit2, Trash2, Search, Grid3X3, LayoutList } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import LocationForm from '../components/LocationForm'
 
+function statusOf(loc) {
+  if (loc.archived) return 'archived'
+  if (loc.published) return 'published'
+  return 'draft'
+}
+
+const STATUS_STYLE = {
+  published: { label: 'Published', cls: 'bg-emerald-500/20 text-emerald-400' },
+  draft:     { label: 'Draft',     cls: 'bg-amber-500/20 text-amber-400' },
+  archived:  { label: 'Archived',  cls: 'bg-zinc-500/20 text-zinc-400' },
+}
+
 export default function AdminLocations() {
   const [locations, setLocations] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all') // 'all' | 'published' | 'draft' | 'archived'
   const [showForm, setShowForm] = useState(false)
   const [editingLocation, setEditingLocation] = useState(null)
   const [viewMode, setViewMode] = useState('table') // 'table' or 'grid'
@@ -51,31 +64,52 @@ export default function AdminLocations() {
   }
 
   const handleSubmitLocation = async (formData) => {
-    try {
-      if (editingLocation?.id) {
-        const { error } = await supabase
-          .from('locations')
-          .update(formData)
-          .eq('id', editingLocation.id)
-        if (error) throw error
-      } else {
-        const { error } = await supabase.from('locations').insert([formData])
-        if (error) throw error
+    if (editingLocation?.id) {
+      console.log('[AdminLocations] UPDATE id=', editingLocation.id, 'payload=', formData)
+      const { data, error } = await supabase
+        .from('locations')
+        .update(formData)
+        .eq('id', editingLocation.id)
+        .select()
+      if (error) {
+        console.error('[AdminLocations] Supabase update error:', error)
+        throw error
       }
-
-      setShowForm(false)
-      setEditingLocation(null)
-      fetchLocations()
-    } catch (err) {
-      console.error('Error saving location:', err)
+      console.log('[AdminLocations] UPDATE success — rows affected:', data?.length, data)
+      if (!data || data.length === 0) {
+        throw new Error('No rows updated. Check RLS policy on the locations table — the anon key may not have UPDATE permission.')
+      }
+    } else {
+      console.log('[AdminLocations] INSERT payload=', formData)
+      const { data, error } = await supabase
+        .from('locations')
+        .insert([formData])
+        .select()
+      if (error) {
+        console.error('[AdminLocations] Supabase insert error:', error)
+        throw error
+      }
+      console.log('[AdminLocations] INSERT success:', data)
     }
+    setShowForm(false)
+    setEditingLocation(null)
+    fetchLocations()
   }
 
-  const filteredLocations = locations.filter(
-    loc =>
+  const filteredLocations = locations.filter(loc => {
+    const matchesSearch =
       loc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       loc.city.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+    const matchesStatus = statusFilter === 'all' || statusOf(loc) === statusFilter
+    return matchesSearch && matchesStatus
+  })
+
+  const counts = {
+    all: locations.length,
+    published: locations.filter(l => statusOf(l) === 'published').length,
+    draft: locations.filter(l => statusOf(l) === 'draft').length,
+    archived: locations.filter(l => statusOf(l) === 'archived').length,
+  }
 
   if (loading) {
     return (
@@ -130,6 +164,34 @@ export default function AdminLocations() {
             Add
           </motion.button>
         </div>
+      </div>
+
+      {/* Status filter tabs */}
+      <div className="flex flex-wrap gap-1 border-b border-outline-variant/25 pb-2 -mt-1">
+        {[
+          { key: 'all', label: 'All' },
+          { key: 'published', label: 'Published' },
+          { key: 'draft', label: 'Drafts' },
+          { key: 'archived', label: 'Archived' },
+        ].map(tab => {
+          const active = statusFilter === tab.key
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setStatusFilter(tab.key)}
+              className={`px-3 py-1.5 text-xs rounded-md transition-colors flex items-center gap-1.5 ${
+                active
+                  ? 'bg-gold/15 border border-gold/40 text-gold'
+                  : 'border border-transparent text-on-surface-variant hover:text-on-surface hover:bg-surface-low'
+              }`}
+            >
+              {tab.label}
+              <span className="text-[10px] opacity-70 tabular-nums">
+                {counts[tab.key]}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
       {/* Form Modal */}
@@ -189,13 +251,14 @@ export default function AdminLocations() {
                       <td className="px-3 py-2 text-on-surface-variant text-xs capitalize">{location.type}</td>
                       <td className="px-3 py-2 text-on-surface text-xs">€{location.price}</td>
                       <td className="px-3 py-2">
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                          location.published
-                            ? 'bg-green-500/20 text-green-400'
-                            : 'bg-yellow-500/20 text-yellow-400'
-                        }`}>
-                          {location.published ? 'Pub' : 'Draft'}
-                        </span>
+                        {(() => {
+                          const s = STATUS_STYLE[statusOf(location)]
+                          return (
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${s.cls}`}>
+                              {s.label}
+                            </span>
+                          )
+                        })()}
                       </td>
                       <td className="px-3 py-2 text-right">
                         <div className="flex items-center justify-end gap-1">
@@ -250,13 +313,14 @@ export default function AdminLocations() {
                     <p className="text-gold font-medium">€{location.price}</p>
                   </div>
                   <div className="flex items-center gap-1 pt-2">
-                    <span className={`flex-1 px-2 py-0.5 rounded text-xs font-medium ${
-                      location.published
-                        ? 'bg-green-500/20 text-green-400'
-                        : 'bg-yellow-500/20 text-yellow-400'
-                    }`}>
-                      {location.published ? 'Pub' : 'Draft'}
-                    </span>
+                    {(() => {
+                      const s = STATUS_STYLE[statusOf(location)]
+                      return (
+                        <span className={`flex-1 px-2 py-0.5 rounded text-xs font-medium text-center ${s.cls}`}>
+                          {s.label}
+                        </span>
+                      )
+                    })()}
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -286,22 +350,22 @@ export default function AdminLocations() {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <div className="bg-surface-low rounded-lg p-3 border border-outline-variant/25">
           <p className="text-on-surface-variant text-xs font-medium mb-1">Total</p>
-          <p className="font-display text-2xl font-light text-gold">{locations.length}</p>
+          <p className="font-display text-2xl font-light text-gold">{counts.all}</p>
         </div>
         <div className="bg-surface-low rounded-lg p-3 border border-outline-variant/25">
           <p className="text-on-surface-variant text-xs font-medium mb-1">Published</p>
-          <p className="font-display text-2xl font-light text-green-400">
-            {locations.filter(l => l.published).length}
-          </p>
+          <p className="font-display text-2xl font-light text-emerald-400">{counts.published}</p>
         </div>
         <div className="bg-surface-low rounded-lg p-3 border border-outline-variant/25">
           <p className="text-on-surface-variant text-xs font-medium mb-1">Drafts</p>
-          <p className="font-display text-2xl font-light text-yellow-400">
-            {locations.filter(l => !l.published).length}
-          </p>
+          <p className="font-display text-2xl font-light text-amber-400">{counts.draft}</p>
+        </div>
+        <div className="bg-surface-low rounded-lg p-3 border border-outline-variant/25">
+          <p className="text-on-surface-variant text-xs font-medium mb-1">Archived</p>
+          <p className="font-display text-2xl font-light text-zinc-400">{counts.archived}</p>
         </div>
       </div>
     </div>
