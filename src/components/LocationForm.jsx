@@ -90,6 +90,7 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
     area: '',
     latitude: '',
     longitude: '',
+    google_maps_link: '',
     tags: '',
     amenities: '',
     image_urls: '',
@@ -126,6 +127,7 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
         area: initialData.area || '',
         latitude: initialData.latitude || '',
         longitude: initialData.longitude || '',
+        google_maps_link: initialData.google_maps_link || '',
         tags: Array.isArray(initialData.tags) ? initialData.tags.join(', ') : initialData.tags || '',
         amenities: Array.isArray(initialData.amenities) ? initialData.amenities.join(', ') : initialData.amenities || '',
         image_urls: Array.isArray(initialData.image_urls) ? initialData.image_urls.join(', ') : initialData.image_urls || '',
@@ -144,17 +146,21 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
     } else {
       setForm(emptyForm)
     }
-    setMapsUrl('')
-    setMapsHint(null)
+    setMapsUrl(initialData?.google_maps_link || '')
+    setMapsHint(initialData?.google_maps_link ? {
+      type: 'ok',
+      msg: `✓ Saved link · coords ${Number(initialData.latitude).toFixed(5)}, ${Number(initialData.longitude).toFixed(5)}`,
+    } : null)
     setErrors({})
     setSubmitError(null)
   }, [initialData])
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-  const applyCoords = (coords) => {
+  const applyCoords = (coords, mapUrl) => {
     set('latitude', String(coords.lat))
     set('longitude', String(coords.lng))
+    if (mapUrl) set('google_maps_link', mapUrl)
     setErrors(prev => ({ ...prev, latitude: undefined, longitude: undefined }))
     setMapsHint({
       type: 'ok',
@@ -167,7 +173,7 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
     if (!raw || !raw.trim()) { setMapsHint(null); return }
 
     const coords = parseGoogleMapsUrl(raw)
-    if (coords) { applyCoords(coords); return }
+    if (coords) { applyCoords(coords, raw); return }
 
     if (isShortMapsLink(raw)) {
       setMapsHint({
@@ -216,7 +222,7 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
       }
     }
 
-    // Build payload. Optional columns (archived/place_type_path/architecture_style)
+    // Build payload. Optional columns (archived/place_type_path/architecture_style/google_maps_link)
     // may not exist in older schemas — they get auto-stripped on retry below.
     const data = {
       name: form.name,
@@ -232,6 +238,7 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
       area: form.area ? parseFloat(form.area) : null,
       latitude: parseFloat(form.latitude),
       longitude: parseFloat(form.longitude),
+      google_maps_link: form.google_maps_link || null,
       tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
       amenities: form.amenities ? form.amenities.split(',').map(a => a.trim()).filter(Boolean) : [],
       image_urls: form.image_urls ? form.image_urls.split(',').map(u => u.trim()).filter(Boolean) : [],
@@ -248,7 +255,7 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
     console.log('[LocationForm] Submitting payload:', data)
 
     // Auto-retry without optional columns if schema doesn't have them yet.
-    const optional = ['archived', 'place_type_path', 'architecture_style']
+    const optional = ['archived', 'place_type_path', 'architecture_style', 'google_maps_link']
 
     const attempt = async (payload) => {
       try {

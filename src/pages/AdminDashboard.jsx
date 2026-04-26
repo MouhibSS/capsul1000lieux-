@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, Link } from 'react-router-dom'
 import {
   BarChart3, MapPin, Settings, Calendar, LogOut, Heart, Search, Bell, ExternalLink, Sparkles,
-  Power, AlertTriangle, ShieldCheck, X, Eye, Info, Check, Menu, MessageSquare,
+  Power, AlertTriangle, ShieldCheck, X, Eye, Info, Check, Menu, MessageSquare, Rocket, Mail,
 } from 'lucide-react'
 import { useAuthContext } from '../context/AuthContext'
 import { useMaintenanceContext } from '../context/MaintenanceContext'
@@ -30,13 +30,17 @@ export default function AdminDashboard() {
   const [maintModalOpen, setMaintModalOpen] = useState(false)
   const [maintBusy, setMaintBusy] = useState(false)
   const [maintError, setMaintError] = useState('')
+  const [prelaunchModalOpen, setPrelaunchModalOpen] = useState(false)
+  const [prelaunchBusy, setPrelaunchBusy] = useState(false)
+  const [prelaunchError, setPrelaunchError] = useState('')
+  const [subscriberCount, setSubscriberCount] = useState(0)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const navigate = useNavigate()
   const [toast, setToast] = useState(null)
   const [unreadMsgs, setUnreadMsgs] = useState(0)
   const [newMsgFlash, setNewMsgFlash] = useState(false)
   const { user, logout } = useAuthContext()
-  const { maintenanceMode, toggle: toggleMaintenance, clearBypass } = useMaintenanceContext()
+  const { maintenanceMode, prelaunchMode, toggle: toggleMaintenance, togglePrelaunch, clearBypass } = useMaintenanceContext()
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type })
@@ -90,6 +94,44 @@ export default function AdminDashboard() {
       setMaintBusy(false)
     }
   }
+
+  const handlePrelaunchToggle = async (enable) => {
+    setPrelaunchBusy(true)
+    setPrelaunchError('')
+    try {
+      await togglePrelaunch(enable)
+      setPrelaunchModalOpen(false)
+      showToast(enable ? 'Pre-launch page is now live' : 'Site is live again — pre-launch disabled')
+    } catch (err) {
+      setPrelaunchError(err.message || 'Failed to update pre-launch mode')
+    } finally {
+      setPrelaunchBusy(false)
+    }
+  }
+
+  // Fetch subscriber count + subscribe to live updates
+  useEffect(() => {
+    let mounted = true
+    supabase
+      .from('prelaunch_subscribers')
+      .select('id', { count: 'exact', head: true })
+      .then(({ count, error }) => {
+        if (mounted && !error) setSubscriberCount(count || 0)
+      })
+
+    const channel = supabase
+      .channel('prelaunch_subscribers_inserts')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'prelaunch_subscribers' }, () => {
+        if (mounted) {
+          setSubscriberCount((n) => n + 1)
+          showToast('New pre-launch subscriber', 'success')
+        }
+      })
+      .subscribe()
+
+    return () => { mounted = false; supabase.removeChannel(channel) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const activeTabData = tabs.find(t => t.id === activeTab)
   const now = new Date()
@@ -265,6 +307,35 @@ export default function AdminDashboard() {
                   >
                     {unreadMsgs > 99 ? '99+' : unreadMsgs}
                   </motion.span>
+                )}
+              </button>
+
+              {/* Pre-launch Mode Button */}
+              <button
+                onClick={() => { setPrelaunchError(''); setPrelaunchModalOpen(true) }}
+                className={`relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-lg transition-all border ${
+                  prelaunchMode
+                    ? 'bg-gold/15 text-gold border-gold/40 hover:bg-gold/25'
+                    : 'bg-white/[0.03] text-on-surface-variant border-white/[0.06] hover:text-gold hover:border-gold/40 hover:bg-gold/10'
+                }`}
+                title={prelaunchMode ? 'Pre-launch page is active — click to disable' : 'Show pre-launch page with email signup'}
+              >
+                {prelaunchMode ? (
+                  <motion.span
+                    animate={{ opacity: [1, 0.4, 1] }}
+                    transition={{ duration: 1.8, repeat: Infinity }}
+                    className="w-1.5 h-1.5 rounded-full bg-gold"
+                  />
+                ) : (
+                  <Rocket className="w-3 h-3" strokeWidth={2.2} />
+                )}
+                <span className="hidden sm:inline">
+                  {prelaunchMode ? 'Pre-launch ON' : 'Pre-launch'}
+                </span>
+                {subscriberCount > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 bg-gold/20 text-gold text-[9px] rounded-full font-bold">
+                    {subscriberCount > 99 ? '99+' : subscriberCount}
+                  </span>
                 )}
               </button>
 
@@ -493,6 +564,137 @@ export default function AdminDashboard() {
                       }
                     </button>
                   </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Pre-launch Mode Modal */}
+      <AnimatePresence>
+        {prelaunchModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
+            onClick={(e) => e.target === e.currentTarget && setPrelaunchModalOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+              className="bg-[#0f0f0f] border border-white/10 rounded-xl w-full max-w-md shadow-2xl overflow-hidden"
+            >
+              {/* Header */}
+              <div className={`relative p-6 border-b border-white/5 overflow-hidden ${
+                prelaunchMode ? 'bg-gradient-to-br from-emerald-500/15 to-green-500/5' : 'bg-gradient-to-br from-gold/15 to-amber-500/5'
+              }`}>
+                <div className="relative flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-11 h-11 rounded-xl border flex items-center justify-center ${
+                      prelaunchMode
+                        ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
+                        : 'bg-gold/20 border-gold/40 text-gold'
+                    }`}>
+                      {prelaunchMode
+                        ? <ShieldCheck className="w-5 h-5" strokeWidth={1.75} />
+                        : <Rocket className="w-5 h-5" strokeWidth={1.75} />
+                      }
+                    </div>
+                    <div>
+                      <p className="text-[10px] tracking-[0.25em] uppercase text-on-surface-variant">
+                        {prelaunchMode ? 'Pre-launch active' : 'Launch teaser'}
+                      </p>
+                      <h3 className="font-display text-xl font-light text-on-surface uppercase tracking-wide">
+                        {prelaunchMode ? 'Disable Pre-launch' : 'Pre-launch mode'}
+                      </h3>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setPrelaunchModalOpen(false)}
+                    className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-white/5 rounded-lg transition-colors"
+                  >
+                    <X className="w-4 h-4" strokeWidth={1.5} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 space-y-4">
+                {prelaunchMode ? (
+                  <>
+                    <p className="text-sm text-on-surface-variant leading-relaxed">
+                      The pre-launch page is currently shown to all visitors. Disabling it will reveal the full site immediately.
+                    </p>
+                    <div className="flex items-center gap-2 p-3 bg-gold/10 border border-gold/20 rounded-lg">
+                      <Mail className="w-4 h-4 text-gold flex-shrink-0" strokeWidth={2} />
+                      <p className="text-xs text-gold flex-1">
+                        <span className="font-semibold">{subscriberCount}</span> subscriber{subscriberCount !== 1 ? 's' : ''} waiting for launch.
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-on-surface-variant leading-relaxed">
+                      Show all visitors a curated "coming soon" page with an email signup. The site will be hidden until you disable this mode.
+                    </p>
+                    <ul className="space-y-1.5 text-xs text-on-surface-variant">
+                      <li className="flex items-start gap-2">
+                        <Check className="w-3.5 h-3.5 text-gold flex-shrink-0 mt-0.5" strokeWidth={2.5} />
+                        Aesthetic teaser page with animated centerpiece
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="w-3.5 h-3.5 text-gold flex-shrink-0 mt-0.5" strokeWidth={2.5} />
+                        Visitors can subscribe to get notified at launch
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="w-3.5 h-3.5 text-gold flex-shrink-0 mt-0.5" strokeWidth={2.5} />
+                        Emails saved to <code className="text-gold/80 text-[10px]">prelaunch_subscribers</code>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="w-3.5 h-3.5 text-gold flex-shrink-0 mt-0.5" strokeWidth={2.5} />
+                        Staff can still bypass with passphrase
+                      </li>
+                    </ul>
+                    <div className="p-3 bg-white/[0.03] border border-white/5 rounded-lg">
+                      <p className="text-[10px] uppercase tracking-widest text-on-surface-variant mb-1">Staff passphrase</p>
+                      <p className="font-mono text-sm text-gold">Capsul1234</p>
+                    </div>
+                  </>
+                )}
+
+                {prelaunchError && (
+                  <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                    <p className="text-xs text-red-400">{prelaunchError}</p>
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={() => setPrelaunchModalOpen(false)}
+                    className="flex-1 px-4 py-2.5 text-xs font-medium text-on-surface-variant bg-white/[0.03] hover:bg-white/[0.06] rounded-lg transition-colors uppercase tracking-wider"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handlePrelaunchToggle(!prelaunchMode)}
+                    disabled={prelaunchBusy}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-lg transition-all uppercase tracking-wider disabled:opacity-50 ${
+                      prelaunchMode
+                        ? 'bg-emerald-500 text-white hover:bg-emerald-400'
+                        : 'bg-gold text-bg hover:bg-gold-light'
+                    }`}
+                  >
+                    {prelaunchBusy
+                      ? 'Working...'
+                      : prelaunchMode
+                        ? (<><ShieldCheck className="w-3.5 h-3.5" strokeWidth={2.5} /> Disable</>)
+                        : (<><Rocket className="w-3.5 h-3.5" strokeWidth={2.5} /> Activate</>)
+                    }
+                  </button>
                 </div>
               </div>
             </motion.div>

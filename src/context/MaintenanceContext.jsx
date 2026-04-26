@@ -8,6 +8,7 @@ const BYPASS_KEY = 'maint_bypass'
 
 export function MaintenanceProvider({ children }) {
   const [maintenanceMode, setMaintenanceMode] = useState(false)
+  const [prelaunchMode, setPrelaunchMode] = useState(false)
   const [loading, setLoading] = useState(true)
   const [bypassed, setBypassed] = useState(() => sessionStorage.getItem(BYPASS_KEY) === '1')
 
@@ -17,7 +18,7 @@ export function MaintenanceProvider({ children }) {
     try {
       const { data, error } = await supabase
         .from('site_settings')
-        .select('maintenance_mode')
+        .select('maintenance_mode, prelaunch_mode')
         .eq('id', 1)
         .single()
       if (error) {
@@ -25,16 +26,19 @@ export function MaintenanceProvider({ children }) {
         if (error.code === 'PGRST116' || error.code === '42P01' || /schema cache|does not exist/i.test(error.message || '')) {
           setTableMissing(true)
           setMaintenanceMode(false)
+          setPrelaunchMode(false)
         } else {
           throw error
         }
       } else {
         setMaintenanceMode(!!data?.maintenance_mode)
+        setPrelaunchMode(!!data?.prelaunch_mode)
         setTableMissing(false)
       }
     } catch (err) {
-      console.error('Error fetching maintenance state:', err)
+      console.error('Error fetching site settings:', err)
       setMaintenanceMode(false)
+      setPrelaunchMode(false)
     } finally {
       setLoading(false)
     }
@@ -47,7 +51,10 @@ export function MaintenanceProvider({ children }) {
       .channel('site_settings_changes')
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'site_settings' },
-        (payload) => setMaintenanceMode(!!payload.new?.maintenance_mode)
+        (payload) => {
+          setMaintenanceMode(!!payload.new?.maintenance_mode)
+          setPrelaunchMode(!!payload.new?.prelaunch_mode)
+        }
       )
       .subscribe()
     return () => { supabase.removeChannel(channel) }
@@ -78,6 +85,30 @@ export function MaintenanceProvider({ children }) {
     return data
   }
 
+  const togglePrelaunch = async (newValue) => {
+    const { data, error } = await supabase
+      .from('site_settings')
+      .update({ prelaunch_mode: newValue, updated_at: new Date().toISOString() })
+      .eq('id', 1)
+      .select()
+      .single()
+    if (error) {
+      if (error.code === 'PGRST204' || /column.*prelaunch_mode/i.test(error.message || '')) {
+        throw new Error('prelaunch_mode column missing. Run supabase/prelaunch_settings.sql in the SQL Editor first.')
+      }
+      throw error
+    }
+    setPrelaunchMode(!!data.prelaunch_mode)
+    if (newValue) {
+      sessionStorage.setItem(BYPASS_KEY, '1')
+      setBypassed(true)
+    } else {
+      sessionStorage.removeItem(BYPASS_KEY)
+      setBypassed(false)
+    }
+    return data
+  }
+
   const unlock = (password) => {
     if (password === MAINTENANCE_PASSWORD) {
       sessionStorage.setItem(BYPASS_KEY, '1')
@@ -93,7 +124,18 @@ export function MaintenanceProvider({ children }) {
   }
 
   return (
-    <MaintenanceContext.Provider value={{ maintenanceMode, loading, bypassed, tableMissing, toggle, unlock, clearBypass, refresh: fetchState }}>
+    <MaintenanceContext.Provider value={{
+      maintenanceMode,
+      prelaunchMode,
+      loading,
+      bypassed,
+      tableMissing,
+      toggle,
+      togglePrelaunch,
+      unlock,
+      clearBypass,
+      refresh: fetchState,
+    }}>
       {children}
     </MaintenanceContext.Provider>
   )

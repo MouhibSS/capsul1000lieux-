@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { Plus, Edit2, Trash2, Search, Grid3X3, LayoutList } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Plus, Edit2, Trash2, Search, Grid3X3, LayoutList, Eye } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import LocationForm from '../components/LocationForm'
+import AdminLocationDetail from '../components/AdminLocationDetail'
 
 function statusOf(loc) {
   if (loc.archived) return 'archived'
@@ -23,6 +24,7 @@ export default function AdminLocations() {
   const [statusFilter, setStatusFilter] = useState('all') // 'all' | 'published' | 'draft' | 'archived'
   const [showForm, setShowForm] = useState(false)
   const [editingLocation, setEditingLocation] = useState(null)
+  const [viewingLocation, setViewingLocation] = useState(null)
   const [viewMode, setViewMode] = useState('table') // 'table' or 'grid'
 
   useEffect(() => {
@@ -194,21 +196,39 @@ export default function AdminLocations() {
         })}
       </div>
 
+      {/* Detail View Modal */}
+      <AnimatePresence>
+        {viewingLocation && (
+          <AdminLocationDetail
+            location={viewingLocation}
+            onClose={() => setViewingLocation(null)}
+            onEdit={(loc) => {
+              setViewingLocation(null)
+              handleEditLocation(loc)
+            }}
+            onDelete={(id) => {
+              setViewingLocation(null)
+              handleDeleteLocation(id)
+            }}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Form Modal */}
       {showForm && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-2"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-3"
           onClick={() => setShowForm(false)}
         >
           <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
+            initial={{ scale: 0.95, opacity: 0, y: 30 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.95, opacity: 0, y: 30 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-surface-container rounded-lg p-4 w-full max-w-3xl max-h-[95vh] overflow-y-auto"
+            className="bg-surface-container rounded-t-2xl sm:rounded-xl p-4 sm:p-5 w-full sm:max-w-3xl h-[92vh] sm:h-auto sm:max-h-[92vh] overflow-y-auto"
           >
             <h2 className="text-lg font-light text-on-surface uppercase tracking-wide mb-4">
               {editingLocation ? 'Edit Location' : 'Add New Location'}
@@ -244,7 +264,8 @@ export default function AdminLocations() {
                       key={location.id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="border-b border-outline-variant/15 hover:bg-surface-low/30 transition-colors"
+                      onClick={() => setViewingLocation(location)}
+                      className="border-b border-outline-variant/15 hover:bg-surface-low/40 transition-colors cursor-pointer"
                     >
                       <td className="px-3 py-2 text-on-surface font-medium truncate">{location.name}</td>
                       <td className="px-3 py-2 text-on-surface-variant text-xs">{location.city}</td>
@@ -261,7 +282,16 @@ export default function AdminLocations() {
                         })()}
                       </td>
                       <td className="px-3 py-2 text-right">
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setViewingLocation(location)}
+                            className="p-1 hover:bg-emerald-500/20 hover:text-emerald-400 rounded transition-colors"
+                            title="View"
+                          >
+                            <Eye className="w-3 h-3" strokeWidth={1.5} />
+                          </motion.button>
                           <motion.button
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.95 }}
@@ -303,16 +333,28 @@ export default function AdminLocations() {
                 key={location.id}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="bg-surface-low border border-outline-variant/25 rounded-lg p-3 hover:border-outline-variant/50 transition-all"
+                onClick={() => setViewingLocation(location)}
+                className="bg-surface-low border border-outline-variant/25 rounded-lg overflow-hidden hover:border-gold/40 transition-all cursor-pointer group"
               >
-                <div className="space-y-2">
+                {/* Thumbnail */}
+                {location.image_urls?.[0] && (
+                  <div className="aspect-video bg-surface-container overflow-hidden">
+                    <img
+                      src={location.image_urls[0]}
+                      alt={location.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      loading="lazy"
+                    />
+                  </div>
+                )}
+                <div className="p-3 space-y-2">
                   <p className="font-medium text-on-surface text-sm truncate">{location.name}</p>
                   <div className="space-y-1 text-xs text-on-surface-variant">
                     <p>{location.city}</p>
                     <p className="capitalize">{location.type}</p>
                     <p className="text-gold font-medium">€{location.price}</p>
                   </div>
-                  <div className="flex items-center gap-1 pt-2">
+                  <div className="flex items-center gap-1 pt-2" onClick={(e) => e.stopPropagation()}>
                     {(() => {
                       const s = STATUS_STYLE[statusOf(location)]
                       return (

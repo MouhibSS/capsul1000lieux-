@@ -27,6 +27,7 @@ import Profile from './pages/Profile'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Maintenance from './pages/Maintenance'
+import Prelaunch from './pages/Prelaunch'
 
 function AnimatedRoutes() {
   const location = useLocation()
@@ -53,7 +54,7 @@ function AnimatedRoutes() {
 
 function AppContent() {
   const location = useLocation()
-  const { maintenanceMode, loading: maintLoading, bypassed } = useMaintenanceContext()
+  const { maintenanceMode, prelaunchMode, loading: maintLoading, bypassed } = useMaintenanceContext()
   const isDashboard = location.pathname.startsWith('/dashboard')
 
   useEffect(() => {
@@ -75,6 +76,10 @@ function AppContent() {
 
   if (maintenanceMode && !bypassed) {
     return <Maintenance />
+  }
+
+  if (prelaunchMode && !bypassed) {
+    return <Prelaunch />
   }
 
   return (
