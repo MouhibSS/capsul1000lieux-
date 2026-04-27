@@ -23,6 +23,7 @@ export default function Login() {
   const [error, setError] = useState('')
   const [verifyOpen, setVerifyOpen] = useState(false)
   const [verifyEmail, setVerifyEmail] = useState('')
+  const [confirmedNotice, setConfirmedNotice] = useState(false)
 
   const pendingFavoriteId = location.state?.pendingFavoriteId
   const pendingBooking = location.state?.pendingBooking
@@ -34,7 +35,12 @@ export default function Login() {
       setEmail(location.state.email)
       setVerifyOpen(true)
     }
-  }, [location.state])
+    const params = new URLSearchParams(location.search)
+    if (params.get('confirmed') === '1') {
+      setConfirmedNotice(true)
+      window.history.replaceState({}, '', location.pathname)
+    }
+  }, [location])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -83,6 +89,18 @@ export default function Login() {
               Log in to access your saved favorites and manage your account.
             </p>
           </div>
+
+          {confirmedNotice && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 bg-green-500/10 border border-green-500/20 rounded px-4 py-3"
+            >
+              <p className="text-sm text-green-400">
+                Email confirmed. You can now log in.
+              </p>
+            </motion.div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6 mb-8">
             <div>
