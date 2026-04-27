@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowUpRight } from 'lucide-react'
 import { useAuthContext } from '../context/AuthContext'
+import EmailVerificationModal from '../components/EmailVerificationModal'
 
 const ease = [0.22, 1, 0.36, 1]
 
@@ -20,10 +21,20 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [verifyOpen, setVerifyOpen] = useState(false)
+  const [verifyEmail, setVerifyEmail] = useState('')
 
   const pendingFavoriteId = location.state?.pendingFavoriteId
   const pendingBooking = location.state?.pendingBooking
   const from = location.state?.from?.pathname || '/'
+
+  useEffect(() => {
+    if (location.state?.needsVerification && location.state?.email) {
+      setVerifyEmail(location.state.email)
+      setEmail(location.state.email)
+      setVerifyOpen(true)
+    }
+  }, [location.state])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -46,7 +57,15 @@ export default function Login() {
       const redirectTo = from.includes('/login') ? '/' : from
       navigate(redirectTo)
     } catch (err) {
-      setError(err.message || 'Login failed')
+      const msg = err?.message || 'Login failed'
+      const code = err?.code || ''
+      if (code === 'email_not_confirmed' || /email.*not.*confirm/i.test(msg)) {
+        setVerifyEmail(email)
+        setVerifyOpen(true)
+        setError('')
+      } else {
+        setError(msg)
+      }
     } finally {
       setLoading(false)
     }
@@ -130,6 +149,12 @@ export default function Login() {
           </Link>
         </div>
       </section>
+
+      <EmailVerificationModal
+        isOpen={verifyOpen}
+        onClose={() => setVerifyOpen(false)}
+        emailOverride={verifyEmail}
+      />
     </motion.div>
   )
 }

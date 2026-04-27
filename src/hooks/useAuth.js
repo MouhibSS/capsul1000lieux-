@@ -77,13 +77,6 @@ export function useAuth() {
   const signUp = async (email, password) => {
     const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) throw error
-    // If Supabase requires email confirmation, signUp returns no session.
-    // Force-login immediately so account creation does not require verifying email.
-    if (!data?.session) {
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-      if (signInError) throw signInError
-      return signInData
-    }
     return data
   }
 

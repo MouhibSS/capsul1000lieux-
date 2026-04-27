@@ -43,9 +43,20 @@ export default function Signup() {
     setLoading(true)
 
     try {
-      await signUp(email, password)
-      // No email verification required — user is signed in immediately.
-      // The navbar shows a profile-completion notification until they fill it in.
+      const data = await signUp(email, password)
+      if (!data?.session) {
+        navigate('/login', {
+          replace: true,
+          state: {
+            needsVerification: true,
+            email,
+            from: location.state?.from,
+            pendingBooking,
+            pendingFavoriteId,
+          },
+        })
+        return
+      }
       navigate(from, { replace: true, state: { pendingBooking, pendingFavoriteId, justSignedUp: true } })
     } catch (err) {
       setError(err.message || 'Signup failed')

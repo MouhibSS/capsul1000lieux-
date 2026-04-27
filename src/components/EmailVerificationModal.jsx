@@ -4,18 +4,19 @@ import { X, Mail, Check } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthContext } from '../context/AuthContext'
 
-export default function EmailVerificationModal({ isOpen, onClose }) {
+export default function EmailVerificationModal({ isOpen, onClose, emailOverride }) {
   const { user } = useAuthContext()
+  const email = emailOverride || user?.email
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState(null)
 
   const resend = async () => {
-    if (!user?.email) return
+    if (!email) return
     setSending(true)
     setError(null)
     try {
-      const { error: err } = await supabase.auth.resend({ type: 'signup', email: user.email })
+      const { error: err } = await supabase.auth.resend({ type: 'signup', email })
       if (err) throw err
       setSent(true)
     } catch (err) {
@@ -60,7 +61,7 @@ export default function EmailVerificationModal({ isOpen, onClose }) {
             <p className="text-sm text-on-surface-variant mb-2">
               Confirm your email to secure your account and receive booking updates.
             </p>
-            <p className="text-sm font-medium text-gold break-all mb-6">{user?.email}</p>
+            <p className="text-sm font-medium text-gold break-all mb-6">{email}</p>
 
             {sent ? (
               <div className="bg-gold/10 border border-gold/30 rounded p-4 flex items-start gap-3">
@@ -87,7 +88,7 @@ export default function EmailVerificationModal({ isOpen, onClose }) {
                   {sending ? 'Sending...' : 'Send verification email'}
                 </button>
                 <p className="text-[11px] text-on-surface-variant/70 mt-3 text-center">
-                  Optional — your account works without it, but verifying unlocks email notifications.
+                  You must verify your email before you can log in.
                 </p>
               </>
             )}
