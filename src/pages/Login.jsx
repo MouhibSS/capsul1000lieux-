@@ -151,20 +151,6 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="relative mb-8">
-            <div className="absolute inset-x-0 top-1/2 h-px bg-outline-variant/20" />
-            <div className="relative flex justify-center">
-              <span className="bg-bg px-3 text-sm text-on-surface-variant">Or</span>
-            </div>
-          </div>
-
-          <Link
-            to="/signup"
-            state={{ from: location.state?.from, pendingBooking, pendingFavoriteId }}
-            className="block w-full border border-outline-variant/40 hover:border-gold text-center px-6 py-3 rounded font-medium text-sm uppercase tracking-wide text-on-surface hover:text-gold transition-colors"
-          >
-            Create new account
-          </Link>
         </div>
       </section>
 

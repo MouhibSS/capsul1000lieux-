@@ -1,12 +1,10 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { motion, useScroll, useTransform } from 'framer-motion'
-import { X, Grid3X3, LayoutList, ChevronDown } from 'lucide-react'
-import { locationTypes, cities, filterCategories } from '../data/locations'
+import { motion, useScroll } from 'framer-motion'
+import { Grid3X3, LayoutList, ChevronDown } from 'lucide-react'
 import { useLocations } from '../hooks/useLocations'
 import LocationCard from '../components/LocationCard'
-import HierarchicalFilters from '../components/HierarchicalFilters'
-import { filterLocationsByHierarchy } from '../utils/filterUtils'
+import AdvancedSearchBar, { applyFilters } from '../components/AdvancedSearchBar'
 
 const ease = [0.22, 1, 0.36, 1]
 
@@ -18,56 +16,64 @@ const pageVariants = {
 
 const sortOptions = ['Recommended', 'Price: low to high', 'Price: high to low', 'Top rated']
 
+function parseList(p) {
+  if (!p) return []
+  return p.split(',').filter(Boolean)
+}
+
 export default function Explore() {
   const [params, setParams] = useSearchParams()
   const { locations, loading } = useLocations()
-  const [type, setType] = useState(params.get('type')
-    ? locationTypes.find((t) => t.toLowerCase() === params.get('type')) || 'All'
-    : 'All')
-  const [city, setCity] = useState(params.get('city') || 'All Cities')
+
+  const [filters, setFilters] = useState(() => ({
+    governorates:  parseList(params.get('governorate')),
+    cities:        parseList(params.get('city')),
+    types:         parseList(params.get('type')),
+    architectures: parseList(params.get('architecture')),
+    decorations:   parseList(params.get('decoration')),
+    budgets:       parseList(params.get('budget')),
+    keyword:       params.get('q') || '',
+  }))
+
   const [sort, setSort] = useState('Recommended')
   const [view, setView] = useState('grid')
-  const [showFilters, setShowFilters] = useState(false)
-  const [activeFilterTab, setActiveFilterTab] = useState('placeType')
-  const [placeTypeFilter, setPlaceTypeFilter] = useState([])
-  const [architectureFilter, setArchitectureFilter] = useState([])
 
+  // Sync filters → URL
   useEffect(() => {
     const next = new URLSearchParams()
-    if (type !== 'All') next.set('type', type.toLowerCase())
-    if (city !== 'All Cities') next.set('city', city)
+    if (filters.governorates.length)  next.set('governorate',  filters.governorates.join(','))
+    if (filters.cities.length)        next.set('city',         filters.cities.join(','))
+    if (filters.types.length)         next.set('type',         filters.types.join(','))
+    if (filters.architectures.length) next.set('architecture', filters.architectures.join(','))
+    if (filters.decorations.length)   next.set('decoration',   filters.decorations.join(','))
+    if (filters.budgets.length)       next.set('budget',       filters.budgets.join(','))
+    if (filters.keyword)              next.set('q',            filters.keyword)
     setParams(next, { replace: true })
-  }, [type, city, setParams])
+  }, [filters, setParams])
 
   const filtered = useMemo(() => {
-    let result = [...locations]
-
-    // Apply hierarchical filters if available, otherwise fall back to legacy type filter
-    if (placeTypeFilter.length > 0 || architectureFilter.length > 0) {
-      result = filterLocationsByHierarchy(result, placeTypeFilter, architectureFilter)
-    } else if (type !== 'All') {
-      result = result.filter((l) => l.type === type.toLowerCase())
-    }
-
-    // Apply city filter
-    if (city !== 'All Cities') result = result.filter((l) => l.city === city)
-
-    // Apply sorting
-    if (sort === 'Price: low to high') result.sort((a, b) => a.price - b.price)
-    if (sort === 'Price: high to low') result.sort((a, b) => b.price - a.price)
-    if (sort === 'Top rated') result.sort((a, b) => b.rating - a.rating)
-
+    let result = applyFilters(locations, filters)
+    if (sort === 'Price: low to high') result = [...result].sort((a, b) => a.price - b.price)
+    if (sort === 'Price: high to low') result = [...result].sort((a, b) => b.price - a.price)
+    if (sort === 'Top rated')          result = [...result].sort((a, b) => b.rating - a.rating)
     return result
-  }, [locations, type, city, sort, placeTypeFilter, architectureFilter])
+  }, [locations, filters, sort])
 
   const headerRef = useRef(null)
-  const { scrollYProgress } = useScroll({ target: headerRef, offset: ['start center', 'end center'] })
+  useScroll({ target: headerRef, offset: ['start center', 'end center'] })
+
+  const totalActive =
+    filters.governorates.length + filters.cities.length + filters.types.length +
+    filters.architectures.length + filters.decorations.length + filters.budgets.length +
+    (filters.keyword ? 1 : 0)
+
+  const clearAll = () => setFilters({
+    governorates: [], cities: [], types: [], architectures: [], decorations: [], budgets: [], keyword: '',
+  })
 
   return (
     <motion.div variants={pageVariants} initial="initial" animate="enter" exit="exit" className="min-h-screen bg-bg">
-      {/* Editorial header */}
       <section ref={headerRef} className="relative pt-28 md:pt-36 pb-12 md:pb-16 border-b border-outline-variant/25 noise overflow-hidden">
-        {/* Animated shimmer gradient */}
         <motion.div
           className="absolute inset-0 pointer-events-none"
           animate={{
@@ -83,12 +89,7 @@ export default function Explore() {
         <div className="container-main relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-10 items-end">
             <div className="lg:col-span-8">
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, ease }}
-                className="flex items-center gap-3 mb-6"
-              >
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease }} className="flex items-center gap-3 mb-6">
                 <span className="w-6 h-px bg-gold" />
                 <span className="eyebrow">The Index — {filtered.length} spaces</span>
               </motion.div>
@@ -109,227 +110,71 @@ export default function Explore() {
               transition={{ delay: 0.25, duration: 0.8 }}
               className="lg:col-span-4 text-on-surface-variant font-light leading-relaxed"
             >
-              The complete index of scouted spaces across the country — filter
-              by typology, governorate, or sort by rate. Every entry is
-              bookable and vetted in person.
+              Filtrez par gouvernorat, ville, type de lieu, architecture, décoration ou budget. Sélection multiple — affinez librement.
             </motion.p>
           </div>
         </div>
       </section>
 
-      {/* Filters bar */}
-      <section className="sticky top-16 md:top-20 z-30 bg-bg/90 backdrop-blur-xl border-b border-outline-variant/25">
-        <div className="container-main py-4 md:py-5 flex flex-col gap-4">
-          <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
-            {/* Filter tabs and controls */}
-            <div className="flex items-center gap-2">
+      {/* Sticky search bar */}
+      <section className="sticky top-16 md:top-20 z-30 bg-bg/95 backdrop-blur-xl border-b border-outline-variant/25">
+        <div className="container-main py-4">
+          <AdvancedSearchBar
+            mode="controlled"
+            value={filters}
+            onChange={setFilters}
+            resultsCount={filtered.length}
+          />
+
+          {/* Sort + view toggle */}
+          <div className="mt-3 flex items-center gap-3 flex-wrap">
+            <span className="eyebrow-sm text-on-surface-variant">{filtered.length} résultats</span>
+            {totalActive > 0 && (
               <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`px-4 py-2 text-[10px] font-medium tracking-[0.25em] uppercase transition-all duration-300 border ${
-                  showFilters || placeTypeFilter.length > 0 || architectureFilter.length > 0
-                    ? 'bg-gold text-bg border-gold'
-                    : 'border-outline-variant/40 text-on-surface-variant hover:text-gold hover:border-gold'
-                }`}
+                onClick={clearAll}
+                className="text-[10px] tracking-[0.25em] uppercase text-gold hover:text-gold-light"
               >
-                Advanced Filters
+                Effacer ({totalActive})
               </button>
-            </div>
-
-            <div className="md:ml-auto flex items-center gap-2 flex-wrap">
-              <div className="relative">
-                <select
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  className="appearance-none bg-transparent border border-outline-variant/40 text-on-surface text-xs px-4 py-2 pr-8 outline-none cursor-pointer hover:border-gold transition-colors font-light"
-                >
-                  {cities.map((c) => (
-                    <option key={c} value={c} className="bg-surface-low">
-                      {c}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="w-3 h-3 text-on-surface-variant absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={1.5} />
-              </div>
-
+            )}
+            <div className="ml-auto flex items-center gap-2">
               <div className="relative">
                 <select
                   value={sort}
                   onChange={(e) => setSort(e.target.value)}
                   className="appearance-none bg-transparent border border-outline-variant/40 text-on-surface text-xs px-4 py-2 pr-8 outline-none cursor-pointer hover:border-gold transition-colors font-light"
                 >
-                  {sortOptions.map((s) => (
-                    <option key={s} value={s} className="bg-surface-low">
-                      {s}
-                    </option>
-                  ))}
+                  {sortOptions.map((s) => (<option key={s} value={s} className="bg-surface-low">{s}</option>))}
                 </select>
                 <ChevronDown className="w-3 h-3 text-on-surface-variant absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={1.5} />
               </div>
-
               <div className="flex border border-outline-variant/40">
-                <button
-                  onClick={() => setView('grid')}
-                  className={`p-2.5 transition-colors ${view === 'grid' ? 'text-gold' : 'text-on-surface-variant hover:text-gold'}`}
-                  aria-label="Grid view"
-                >
+                <button onClick={() => setView('grid')} className={`p-2.5 transition-colors ${view === 'grid' ? 'text-gold' : 'text-on-surface-variant hover:text-gold'}`} aria-label="Grid view">
                   <Grid3X3 className="w-3.5 h-3.5" strokeWidth={1.5} />
                 </button>
-                <button
-                  onClick={() => setView('list')}
-                  className={`p-2.5 transition-colors border-l border-outline-variant/40 ${view === 'list' ? 'text-gold' : 'text-on-surface-variant hover:text-gold'}`}
-                  aria-label="List view"
-                >
+                <button onClick={() => setView('list')} className={`p-2.5 transition-colors border-l border-outline-variant/40 ${view === 'list' ? 'text-gold' : 'text-on-surface-variant hover:text-gold'}`} aria-label="List view">
                   <LayoutList className="w-3.5 h-3.5" strokeWidth={1.5} />
                 </button>
               </div>
             </div>
           </div>
-
-          {/* Advanced filters panel */}
-          {showFilters && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.5, ease }}
-              className="border-t border-outline-variant/25 pt-4"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center gap-3 mb-4 border-b border-outline-variant/25 pb-3">
-                <button
-                  onClick={() => setActiveFilterTab('placeType')}
-                  className={`text-xs font-medium tracking-[0.15em] uppercase transition-colors pb-2 ${
-                    activeFilterTab === 'placeType'
-                      ? 'text-gold border-b-2 border-gold'
-                      : 'text-on-surface-variant hover:text-gold'
-                  }`}
-                >
-                  {filterCategories.placeType.label}
-                </button>
-                <button
-                  onClick={() => setActiveFilterTab('architecture')}
-                  className={`text-xs font-medium tracking-[0.15em] uppercase transition-colors pb-2 ${
-                    activeFilterTab === 'architecture'
-                      ? 'text-gold border-b-2 border-gold'
-                      : 'text-on-surface-variant hover:text-gold'
-                  }`}
-                >
-                  {filterCategories.architecture.label}
-                </button>
-              </div>
-
-              <div className="max-w-2xl" onClick={(e) => e.stopPropagation()}>
-                {activeFilterTab === 'placeType' && (
-                  <HierarchicalFilters
-                    category={filterCategories.placeType}
-                    onFilterChange={(filters) => {
-                      setPlaceTypeFilter(filters)
-                      setShowFilters(false)
-                    }}
-                    selected={placeTypeFilter}
-                  />
-                )}
-                {activeFilterTab === 'architecture' && (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {Object.entries(filterCategories.architecture.children).map(([key, data]) => (
-                      <button
-                        key={key}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          const newFilters = architectureFilter.includes(key) ? architectureFilter.filter(k => k !== key) : [...architectureFilter, key]
-                          setArchitectureFilter(newFilters)
-                          setShowFilters(false)
-                        }}
-                        className={`px-3 py-2 text-xs font-medium tracking-[0.15em] uppercase transition-all ${
-                          architectureFilter.includes(key)
-                            ? 'bg-gold text-bg'
-                            : 'border border-outline-variant/40 text-on-surface-variant hover:text-gold hover:border-gold'
-                        }`}
-                      >
-                        {data.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
         </div>
-
-        {/* Active chips */}
-        {(type !== 'All' || city !== 'All Cities' || placeTypeFilter.length > 0 || architectureFilter.length > 0) && (
-          <div className="container-main pb-4 flex items-center gap-2 flex-wrap">
-            <span className="eyebrow-sm text-on-surface-variant">Active</span>
-            {type !== 'All' && (
-              <button
-                onClick={() => setType('All')}
-                className="flex items-center gap-2 chip-gold hover:bg-gold hover:text-bg transition-colors"
-              >
-                {type} <X className="w-2.5 h-2.5" strokeWidth={1.5} />
-              </button>
-            )}
-            {placeTypeFilter.map((path, idx) => (
-              <button
-                key={`place-${idx}`}
-                onClick={() => {
-                  const newFilters = placeTypeFilter.filter((_, i) => i !== idx)
-                  setPlaceTypeFilter(newFilters)
-                }}
-                className="flex items-center gap-2 chip-gold hover:bg-gold hover:text-bg transition-colors"
-              >
-                {path[path.length - 1]} <X className="w-2.5 h-2.5" strokeWidth={1.5} />
-              </button>
-            ))}
-            {architectureFilter.map((arch) => (
-              <button
-                key={`arch-${arch}`}
-                onClick={() => {
-                  const newFilters = architectureFilter.filter((a) => a !== arch)
-                  setArchitectureFilter(newFilters)
-                }}
-                className="flex items-center gap-2 chip-gold hover:bg-gold hover:text-bg transition-colors"
-              >
-                {filterCategories.architecture.children[arch]?.label || arch}
-                <X className="w-2.5 h-2.5" strokeWidth={1.5} />
-              </button>
-            ))}
-            {city !== 'All Cities' && (
-              <button
-                onClick={() => setCity('All Cities')}
-                className="flex items-center gap-2 chip-gold hover:bg-gold hover:text-bg transition-colors"
-              >
-                {city} <X className="w-2.5 h-2.5" strokeWidth={1.5} />
-              </button>
-            )}
-          </div>
-        )}
       </section>
 
-      {/* Grid */}
       <section className="container-main py-10 md:py-16">
         {loading ? (
           <div className="text-center py-32">
-            <p className="font-display text-5xl font-extralight text-on-surface/30 mb-4 uppercase tracking-display">
-              Loading...
-            </p>
+            <p className="font-display text-5xl font-extralight text-on-surface/30 mb-4 uppercase tracking-display">Loading...</p>
           </div>
         ) : filtered.length > 0 ? (
-          <div
-            className={`grid gap-x-5 md:gap-x-6 gap-y-10 md:gap-y-12 ${
-              view === 'grid'
-                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-                : 'grid-cols-1 sm:grid-cols-2'
-            }`}
-          >
+          <div className={`grid gap-x-5 md:gap-x-6 gap-y-10 md:gap-y-12 ${view === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1 sm:grid-cols-2'}`}>
             {filtered.map((loc, i) => (
               <LocationCard key={loc.id} location={loc} index={i} />
             ))}
           </div>
         ) : (
           <div className="text-center py-32">
-            <p className="font-display text-5xl font-extralight text-on-surface/30 mb-4 uppercase tracking-display">
-              No spaces match
-            </p>
+            <p className="font-display text-5xl font-extralight text-on-surface/30 mb-4 uppercase tracking-display">No spaces match</p>
             <p className="eyebrow-sm text-on-surface-variant">Try adjusting your filters</p>
           </div>
         )}

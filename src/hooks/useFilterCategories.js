@@ -74,6 +74,33 @@ export function useFilterCategories() {
     }
   }
 
+  // Derived: group rows into { [type]: [{ section, sectionKey, options:[{key,label,metadata}] }, ...] }
+  // Mirrors the *_GROUPED arrays in AdvancedSearchBar so SectionedDropdown can consume it.
+  const enabled = categories.filter((c) => c.enabled !== false)
+  const byType = {}
+  for (const r of enabled) {
+    if (!byType[r.category_type]) byType[r.category_type] = { parents: [], children: {} }
+    if (!r.parent_key) byType[r.category_type].parents.push(r)
+    else {
+      const m = byType[r.category_type].children
+      if (!m[r.parent_key]) m[r.parent_key] = []
+      m[r.parent_key].push(r)
+    }
+  }
+  const groupedByType = {}
+  for (const [type, { parents, children }] of Object.entries(byType)) {
+    if (parents.length === 0) {
+      const flat = enabled.filter((r) => r.category_type === type)
+      groupedByType[type] = [{ section: type, options: flat.map((r) => ({ key: r.key, label: r.label, metadata: r.metadata })) }]
+    } else {
+      groupedByType[type] = parents.map((p) => ({
+        section: p.label,
+        sectionKey: p.key,
+        options: (children[p.key] || []).map((c) => ({ key: c.key, label: c.label, metadata: c.metadata })),
+      }))
+    }
+  }
+
   return {
     categories,
     loading,
@@ -82,5 +109,6 @@ export function useFilterCategories() {
     addCategory,
     updateCategory,
     deleteCategory,
+    groupedByType,
   }
 }

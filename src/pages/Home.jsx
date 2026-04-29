@@ -7,9 +7,8 @@ import Hero from '../components/Hero'
 import CinematicJourney from '../components/CinematicJourney'
 import FeaturedCarousel from '../components/FeaturedCarousel'
 import TrendingSection from '../components/TrendingSection'
-import StatsSection from '../components/StatsSection'
-import SearchBar from '../components/SearchBar'
 import SignatureEmblem from '../components/SignatureEmblem'
+import AdvancedSearchBar from '../components/AdvancedSearchBar'
 
 const ease = [0.22, 1, 0.36, 1]
 
@@ -23,6 +22,7 @@ const TERRACOTTA = '#E8843A'
 
 export default function Home() {
   const t = useTranslation('home')
+  const tHero = useTranslation('hero')
 
   const categories = [
     { label: 'Sidi Bou Said',  count: 142, city: 'Sidi Bou Said', img: getCategoryImageUrl('rooftop'), fallback: '#0e1a25' },
@@ -61,9 +61,63 @@ export default function Home() {
     <motion.div variants={pageVariants} initial="initial" animate="enter" exit="exit">
       <Hero />
 
+      {/* ── Search bar — blends into next section ── */}
+      <div className="relative z-50 -mt-12 md:-mt-20">
+        {/* Gradient blend overlay */}
+        <div
+          className="absolute inset-x-0 -top-20 md:-top-32 h-40 md:h-56 pointer-events-none z-0"
+          style={{
+            background: 'linear-gradient(180deg, rgba(10,10,10,0) 0%, rgba(10,10,10,0.4) 40%, rgba(10,10,10,0.85) 80%, rgba(10,10,10,1) 100%)',
+          }}
+        />
+        <div className="container-main relative">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease, delay: 0.4 }}
+          >
+            <AdvancedSearchBar />
+          </motion.div>
+        </div>
+      </div>
+
+      {/* ── Hero intro — description + stats ── */}
+      <div className="relative z-20 bg-bg">
+        <div className="container-main pt-12 md:pt-16 pb-10 md:pb-14">
+          <motion.p
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease, delay: 0.5 }}
+            className="max-w-3xl text-on-surface-variant text-sm md:text-base font-light leading-relaxed mb-8 md:mb-10"
+          >
+            {tHero.description}
+          </motion.p>
+
+          {/* Stats row — clients, places, governorates */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, ease, delay: 0.7 }}
+            className="grid grid-cols-1 md:grid-cols-3 gap-px bg-outline-variant/25 border border-outline-variant/25"
+          >
+            {[
+              { val: '850+', label: 'Clients served',     desc: 'Directors, brands & agencies' },
+              { val: '1K+',  label: 'Curated places',     desc: 'Hand-scouted across Tunisia' },
+              { val: '24/24', label: 'Governorates covered', desc: 'From Tunis to Tataouine' },
+            ].map(({ val, label, desc }) => (
+              <div key={label} className="bg-bg px-6 py-6 md:px-8 md:py-7 flex flex-col gap-2">
+                <span className="font-display text-3xl md:text-4xl font-light text-gold tabular-nums leading-none">{val}</span>
+                <span className="eyebrow text-on-surface mt-1">{label}</span>
+                <span className="text-on-surface-variant text-xs font-light leading-relaxed">{desc}</span>
+              </div>
+            ))}
+          </motion.div>
+        </div>
+      </div>
+
       {/* ── Location marquee ─────────────────────────────────────── */}
       <div
-        className="marquee py-5 md:py-7 border-y border-outline-variant/25 overflow-hidden"
+        className="marquee py-5 md:py-7 border-y border-outline-variant/25 overflow-hidden relative z-10"
         style={{ background: 'linear-gradient(90deg,#0a0a0a 0%,#12080200 30%,#0a100e 60%,#080a12 85%,#0a0a0a 100%)' }}
       >
         <div className="marquee-track gap-6 md:gap-10">
@@ -81,123 +135,13 @@ export default function Home() {
       {/* ── Signature Emblem — 3D interactive centerpiece ────────── */}
       <SignatureEmblem />
 
-      {/* ── Search ──────────────────────────────────────────────── */}
-      <section className="py-14 md:py-20 border-b border-outline-variant/25">
-        <div className="container-main">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12 mb-8 md:mb-10 items-center">
-            <div className="lg:col-span-7">
-              <div className="flex items-center gap-3 mb-5">
-                <span className="w-6 h-px bg-gold" />
-                <span className="eyebrow">{t.searchEyebrow}</span>
-              </div>
-              <h2 className="font-display font-light text-2xl sm:text-3xl md:text-4xl lg:text-[2.75rem] leading-[0.95] tracking-display uppercase text-on-surface max-w-xl">
-                {t.searchHeading.split(' ').slice(0, -1).join(' ')} <span className="stroke-text italic font-extralight">{t.searchHeading.split(' ').pop()}</span>
-              </h2>
-              <p className="text-on-surface-variant text-sm font-light max-w-sm mt-5 leading-relaxed">
-                {t.searchDesc}
-              </p>
-            </div>
-
-            {/* Editorial image — right column */}
-            <div className="hidden lg:block lg:col-span-4 lg:col-start-9">
-              <div className="relative overflow-hidden aspect-[4/3] group">
-                <img
-                  src={getHeroImageUrl(1)}
-                  alt="Medina interior"
-                  loading="lazy"
-                  className="w-full h-full object-cover img-mono"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-bg/70 via-transparent to-transparent" />
-                <div className="absolute top-3 left-3 w-4 h-4 border-l border-t border-gold/50" />
-                <div className="absolute top-3 right-3 w-4 h-4 border-r border-t border-gold/50" />
-                <div className="absolute bottom-3 left-3 w-4 h-4 border-l border-b border-gold/50" />
-                <div className="absolute bottom-3 right-3 w-4 h-4 border-r border-b border-gold/50" />
-                <div className="absolute bottom-4 left-4 eyebrow-sm text-on-surface-variant font-mono">
-                  Medina Loft · Tunis
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <SearchBar />
-        </div>
-      </section>
-
-      <CinematicJourney />
-
-      {/* ── Categories ──────────────────────────────────────────── */}
-      <section className="py-16 md:py-24 lg:py-28 border-t border-outline-variant/25">
-        <div className="container-main">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-10 items-end mb-10 md:mb-14">
-            <div className="lg:col-span-7">
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.8, ease }}
-                className="flex items-center gap-3 mb-6"
-              >
-                <span className="w-6 h-px bg-gold" />
-                <span className="eyebrow">{t.typologyEyebrow}</span>
-              </motion.div>
-              <motion.h2
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.9, ease }}
-                className="font-display font-light text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-[0.9] tracking-display uppercase text-on-surface"
-              >
-                {t.typologyHeading.split(',')[0]},
-                <br />
-                <span className="text-gold-gradient italic font-extralight">{t.typologyHeading.split(',')[1]?.trim()}</span>
-              </motion.h2>
-            </div>
-            <motion.p
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8 }}
-              className="lg:col-span-4 lg:col-start-9 text-on-surface-variant text-sm font-light leading-relaxed"
-            >
-              {t.typologyDesc}
-            </motion.p>
-          </div>
-
-          <div className="flex md:grid md:grid-cols-3 lg:grid-cols-6 gap-4 -mx-6 md:mx-0 px-6 md:px-0 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none no-scrollbar pb-3 md:pb-0">
-            {categories.map((cat, i) => (
-              <motion.div
-                key={cat.label}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.06, duration: 0.6, ease }}
-                className="snap-start shrink-0 basis-[44%] sm:basis-[32%] md:basis-auto md:shrink"
-              >
-                <Link
-                  to={`/explore?city=${cat.city}`}
-                  className="group relative overflow-hidden block aspect-[3/4] img-zoom bg-surface-low"
-                  style={{ backgroundColor: cat.fallback }}
-                >
-                  <img src={cat.img} alt={cat.label} className="w-full h-full object-cover transition-transform duration-700 ease-out" loading="lazy" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/30 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between">
-                    <div>
-                      <p className="font-display text-sm font-light text-on-surface uppercase tracking-wide leading-tight group-hover:text-gold transition-colors duration-500">
-                        {cat.label}
-                      </p>
-                      <p className="eyebrow-sm text-on-surface-variant mt-1">{cat.count} {t.typologySpaces}</p>
-                    </div>
-                    <ArrowUpRight className="w-3 h-3 text-gold opacity-0 translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500" strokeWidth={1.5} />
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
+      {/* ── Featured & Trending — moved up after centerpiece ─────── */}
       <FeaturedCarousel />
       <TrendingSection />
+
+    
+
+      <CinematicJourney />
 
       {/* ── Services — desert backdrop ───────────────────────────── */}
       <section className="relative py-14 md:py-20 border-t border-outline-variant/25 overflow-hidden">
@@ -233,8 +177,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      <StatsSection />
 
       {/* ── Values — 216 000 lieux standard ─────────────────────────────── */}
       <section className="relative py-16 md:py-24 lg:py-28 border-t border-outline-variant/25 overflow-hidden">
@@ -295,7 +237,6 @@ export default function Home() {
 
       {/* ── Owners CTA — terracotta color pop ───────────────────── */}
       <section className="relative py-16 md:py-24 lg:py-28 border-t border-outline-variant/25 overflow-hidden">
-        {/* Image with warm terracotta overlay — the color pop moment */}
         <div className="absolute inset-0 pointer-events-none">
           <img
             src={getHeroImageUrl(4)}
@@ -315,7 +256,6 @@ export default function Home() {
 
         <div className="container-main relative">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-            {/* Content */}
             <div className="lg:col-span-7">
               <div className="flex items-center gap-3 mb-6">
                 <span className="w-6 h-px" style={{ backgroundColor: TERRACOTTA }} />
@@ -344,7 +284,6 @@ export default function Home() {
               </Link>
             </div>
 
-            {/* Right — image card with stats overlaid */}
             <div className="lg:col-span-4 lg:col-start-9">
               <div className="relative overflow-hidden" style={{ minHeight: '400px' }}>
                 <img
@@ -358,12 +297,10 @@ export default function Home() {
                   className="absolute inset-0"
                   style={{ background: 'linear-gradient(180deg,rgba(50,18,4,0.25)0%,rgba(8,3,1,0.88)100%)' }}
                 />
-                {/* Terracotta corner marks */}
                 <div className="absolute top-4 left-4 w-4 h-4 border-l border-t" style={{ borderColor: `${TERRACOTTA}60` }} />
                 <div className="absolute top-4 right-4 w-4 h-4 border-r border-t" style={{ borderColor: `${TERRACOTTA}60` }} />
                 <div className="absolute bottom-4 left-4 w-4 h-4 border-l border-b" style={{ borderColor: `${TERRACOTTA}60` }} />
                 <div className="absolute bottom-4 right-4 w-4 h-4 border-r border-b" style={{ borderColor: `${TERRACOTTA}60` }} />
-                {/* Stats */}
                 <div className="absolute bottom-0 left-0 right-0 p-6 space-y-3 border-t border-white/8">
                   {[
                     ['+500', t.hostsEarning],

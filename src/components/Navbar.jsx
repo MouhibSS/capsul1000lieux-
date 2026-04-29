@@ -241,14 +241,7 @@ export default function Navbar() {
                   </AnimatePresence>
                 </div>
               </div>
-            ) : (
-              <Link
-                to="/login"
-                className="text-[10px] font-medium tracking-[0.35em] uppercase text-on-surface hover:text-gold transition-colors"
-              >
-                Login
-              </Link>
-            )}
+            ) : null}
             <Link to="/list-space" className="btn-primary py-3 px-6">
               List your space
             </Link>
@@ -358,15 +351,7 @@ export default function Navbar() {
                   )}
                 </AnimatePresence>
               </div>
-            ) : (
-              <Link
-                to="/login"
-                className="p-2 text-on-surface-variant hover:text-gold transition-colors"
-                aria-label="Sign in"
-              >
-                <UserCog className="w-5 h-5" strokeWidth={1.5} />
-              </Link>
-            )}
+            ) : null}
             <Link
               to="/favorites"
               className="relative p-2 text-on-surface-variant hover:text-gold transition-colors"
@@ -485,15 +470,7 @@ export default function Navbar() {
                   <LogOut className="w-3.5 h-3.5" strokeWidth={1.5} />
                   Logout
                 </button>
-              ) : (
-                <Link
-                  to="/login"
-                  onClick={() => setMenuOpen(false)}
-                  className="inline-flex items-center gap-3 text-on-surface hover:text-gold text-[10px] tracking-[0.35em] uppercase transition-colors"
-                >
-                  Login
-                </Link>
-              )}
+              ) : null}
               <div className="text-[10px] font-medium tracking-[0.35em] uppercase flex items-center gap-4 text-on-surface-variant pt-4 border-t border-outline-variant/25">
                 <button
                   onClick={() => choose('en')}

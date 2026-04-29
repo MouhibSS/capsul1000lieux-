@@ -1,17 +1,9 @@
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { useRef } from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowUpRight, MapPin } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { useTranslation } from '../context/LanguageContext'
 
 const ease = [0.22, 1, 0.36, 1]
-
-const stats = [
-  ['1K+', 'Curated spaces'],
-  ['24', 'Governorates'],
-  ['12K+', 'Productions'],
-  ['4.9', 'Avg. rating'],
-]
 
 const marqueeItems = [
   'Sidi Bou Said', 'La Marsa', 'Tozeur', 'Tataouine',
@@ -65,7 +57,7 @@ export default function Hero() {
   return (
     <section
       ref={ref}
-      className="relative min-h-[680px] md:min-h-[820px] lg:h-screen w-full overflow-hidden bg-bg noise"
+      className="relative min-h-[540px] md:min-h-[640px] w-full overflow-hidden bg-bg noise"
     >
       {/* Full-bleed image */}
       <motion.div
@@ -163,10 +155,10 @@ export default function Hero() {
 
       {/* Content */}
       <motion.div
-        className="relative z-10 min-h-[680px] md:min-h-[820px] lg:h-full flex flex-col justify-end pb-12 md:pb-20 pt-32 md:pt-40 container-main"
+        className="relative z-10 min-h-[540px] md:min-h-[640px] flex flex-col justify-center pb-0 pt-24 md:pt-32 container-main"
         style={{ y: contentY, opacity: contentOpacity }}
       >
-        {/* Top row — eyebrow + coordinates */}
+        {/* Top row — eyebrow + status badge */}
         <div className="absolute top-20 md:top-28 left-6 right-6 md:left-12 md:right-12 xl:left-16 xl:right-16 flex items-center justify-between gap-4">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -177,14 +169,31 @@ export default function Hero() {
             <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse-slow" />
             <span className="eyebrow">{t.tagline}</span>
           </motion.div>
+
+          {/* Mobile: compact pill */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease, delay: 0.1 }}
-            className="hidden md:flex items-center gap-3 eyebrow-sm text-on-surface-variant"
+            className="md:hidden flex items-center gap-2 px-2.5 py-1 border border-gold/30 bg-gold/5 backdrop-blur-sm rounded-full"
           >
-            <MapPin className="w-3 h-3 text-gold" strokeWidth={1.5} />
-            36.87°N · 10.34°E
+            <span className="w-1 h-1 rounded-full bg-gold animate-pulse" />
+            <span className="text-[8px] tracking-[0.15em] uppercase text-gold font-medium">1K+ spaces</span>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease, delay: 0.1 }}
+            className="hidden md:flex items-center gap-3"
+          >
+            <div className="flex items-center gap-2 px-3 py-1.5 border border-gold/30 bg-gold/5 backdrop-blur-sm rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
+              <span className="eyebrow-sm text-gold">1,000+ spaces curated</span>
+            </div>
+            <div className="hidden lg:flex items-center gap-2 eyebrow-sm text-on-surface-variant">
+              <Sparkles className="w-3 h-3 text-gold" strokeWidth={1.5} />
+              Vetted by scouts
+            </div>
           </motion.div>
         </div>
 
@@ -195,7 +204,7 @@ export default function Hero() {
             animate={{ opacity: 1 }}
             transition={{ duration: 1, ease }}
             className="font-display font-light leading-[0.9] tracking-display text-on-surface uppercase"
-            style={{ fontSize: 'clamp(2rem, 4.8vw, 5.8rem)' }}
+            style={{ fontSize: 'clamp(3.5rem, 9vw, 5.8rem)' }}
           >
             <motion.span
               initial={{ y: '100%', opacity: 0 }}
@@ -233,70 +242,6 @@ export default function Hero() {
           </motion.div>
         </div>
 
-        {/* Lower row — paragraph + CTAs */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12 items-end">
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.9, ease, delay: 0.7 }}
-            className="md:col-span-5 text-on-surface-variant text-sm md:text-base leading-relaxed max-w-sm font-light"
-          >
-            {t.description}
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.9, ease, delay: 0.85 }}
-            className="md:col-span-4 md:col-start-9 flex flex-col sm:flex-row gap-3 md:justify-end"
-          >
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.96 }}
-            >
-              <Link to="/explore" className="btn-primary group">
-                {t.exploreButton}
-                <ArrowUpRight
-                  className="w-3.5 h-3.5 transition-transform duration-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-                  strokeWidth={1.8}
-                />
-              </Link>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.96 }}
-            >
-              <Link to="/list-space" className="btn-ghost">
-                List your space
-              </Link>
-            </motion.div>
-          </motion.div>
-        </div>
-
-        {/* Stats strip */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, ease, delay: 1 }}
-          className="mt-8 md:mt-10 pt-5 md:pt-6 border-t border-outline-variant/30 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6"
-        >
-          {stats.map(([val, label], i) => (
-            <motion.div
-              key={label}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, ease, delay: 1.1 + i * 0.08 }}
-              whileHover={{ y: -2 }}
-              whileTap={{ scale: 0.98 }}
-              className="flex flex-col gap-1"
-            >
-              <span className="font-display text-2xl md:text-3xl text-gold/80 font-light tabular-nums transition-colors duration-300">
-                {val}
-              </span>
-              <span className="eyebrow-sm text-on-surface-variant">{label}</span>
-            </motion.div>
-          ))}
-        </motion.div>
       </motion.div>
 
       {/* Scroll indicator */}

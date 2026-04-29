@@ -24,14 +24,10 @@ const VB_H = 320
 // Hardcoded Tunisian cities with coords
 const CITIES = [
   { name: 'Tunis',        lng: 10.1815, lat: 36.8065 },
-  { name: 'Sidi Bou Said',lng: 10.3400, lat: 36.8700 },
-  { name: 'La Marsa',     lng: 10.3230, lat: 36.8780 },
   { name: 'Hammamet',     lng: 10.6200, lat: 36.4000 },
   { name: 'Sousse',       lng: 10.6369, lat: 35.8256 },
   { name: 'Kairouan',     lng: 10.0978, lat: 35.6784 },
-  { name: 'Sfax',         lng: 10.7600, lat: 34.7400 },
   { name: 'Tozeur',       lng:  8.1300, lat: 33.9200 },
-  { name: 'Djerba',       lng: 10.8500, lat: 33.8700 },
   { name: 'Tataouine',    lng: 10.4500, lat: 32.9300 },
 ]
 

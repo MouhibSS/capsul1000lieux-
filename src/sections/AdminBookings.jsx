@@ -33,7 +33,9 @@ export default function AdminBookings() {
       setBookings(bookings.map(b => ({
         ...b,
         location: locMap[b.location_id],
-        displayEmail: b.user_email || `User ${b.user_id?.slice(0, 8)}`,
+        guestName: b.guest_full_name || b.user_email || `User ${b.user_id?.slice(0, 8)}`,
+        guestEmail: b.guest_email || b.user_email,
+        guestPhone: b.guest_phone,
       })))
     } catch (err) {
       console.error('Error fetching bookings:', err)
@@ -58,7 +60,14 @@ export default function AdminBookings() {
         .single()
       if (error) throw error
 
-      const updated = { ...data, location: bookings.find(b => b.id === id)?.location, displayEmail: data.user_email }
+      const oldBooking = bookings.find(b => b.id === id)
+      const updated = {
+        ...data,
+        location: oldBooking?.location,
+        guestName: data.guest_full_name || data.user_email,
+        guestEmail: data.guest_email || data.user_email,
+        guestPhone: data.guest_phone,
+      }
       setBookings(prev => prev.map(b => b.id === id ? updated : b))
       if (selected?.id === id) setSelected(updated)
       showToast(`Booking ${newStatus}`)
@@ -81,7 +90,13 @@ export default function AdminBookings() {
         .single()
       if (error) throw error
 
-      const updated = { ...data, location: selected.location, displayEmail: data.user_email }
+      const updated = {
+        ...data,
+        location: selected.location,
+        guestName: data.guest_full_name || data.user_email,
+        guestEmail: data.guest_email || data.user_email,
+        guestPhone: data.guest_phone,
+      }
       setBookings(prev => prev.map(b => b.id === selected.id ? updated : b))
       setSelected(updated)
       showToast('Note saved')
@@ -160,7 +175,7 @@ export default function AdminBookings() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-outline-variant/25 bg-surface-low/50">
-                  {['Location', 'Guest', 'Dates', 'Guests', 'Price', 'Status'].map(h => (
+                  {['Location', 'Guest Name', 'Email', 'Phone', 'Dates', 'Guests', 'Price', 'Status'].map(h => (
                     <th key={h} className="px-3 py-2 text-left font-medium text-on-surface">{h}</th>
                   ))}
                 </tr>
@@ -178,7 +193,9 @@ export default function AdminBookings() {
                       <p className="font-medium text-on-surface truncate">{b.location?.name}</p>
                       <p className="text-on-surface-variant">{b.location?.city}</p>
                     </td>
-                    <td className="px-3 py-2 text-on-surface truncate max-w-[120px]">{b.displayEmail}</td>
+                    <td className="px-3 py-2 text-on-surface truncate max-w-[140px]">{b.guestName}</td>
+                    <td className="px-3 py-2 text-on-surface truncate max-w-[160px] text-xs">{b.guestEmail || '—'}</td>
+                    <td className="px-3 py-2 text-on-surface truncate max-w-[120px] text-xs">{b.guestPhone || '—'}</td>
                     <td className="px-3 py-2 text-on-surface whitespace-nowrap">{fmtShort(b.start_date)} – {fmtShort(b.end_date)}</td>
                     <td className="px-3 py-2 text-on-surface-variant">{b.num_guests || 1}</td>
                     <td className="px-3 py-2 font-medium text-gold">€{b.total_price}</td>
@@ -212,9 +229,13 @@ export default function AdminBookings() {
                     <p className="text-on-surface-variant">{b.location?.city}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <User className="w-3 h-3 text-on-surface-variant flex-shrink-0" strokeWidth={2} />
-                  <p className="text-on-surface-variant truncate">{b.displayEmail}</p>
+                <div className="flex items-start gap-2">
+                  <User className="w-3 h-3 text-on-surface-variant flex-shrink-0 mt-0.5" strokeWidth={2} />
+                  <div className="min-w-0">
+                    <p className="text-on-surface font-medium truncate">{b.guestName}</p>
+                    {b.guestEmail && <p className="text-on-surface-variant text-[11px] truncate">{b.guestEmail}</p>}
+                    {b.guestPhone && <p className="text-on-surface-variant text-[11px]">{b.guestPhone}</p>}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="w-3 h-3 text-on-surface-variant flex-shrink-0" strokeWidth={2} />
@@ -288,12 +309,20 @@ export default function AdminBookings() {
                 {/* Info Grid */}
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="space-y-0.5">
-                    <p className="text-on-surface-variant text-xs uppercase tracking-wide">Guest</p>
-                    <p className="text-on-surface font-medium truncate">{selected.displayEmail}</p>
+                    <p className="text-on-surface-variant text-xs uppercase tracking-wide">Name</p>
+                    <p className="text-on-surface font-medium truncate">{selected.guestName}</p>
                   </div>
                   <div className="space-y-0.5">
                     <p className="text-on-surface-variant text-xs uppercase tracking-wide">Guests</p>
                     <p className="text-on-surface font-medium">{selected.num_guests || 1} {(selected.num_guests || 1) > 1 ? 'people' : 'person'}</p>
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-on-surface-variant text-xs uppercase tracking-wide">Email</p>
+                    <p className="text-on-surface font-medium text-xs break-all">{selected.guestEmail || '—'}</p>
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-on-surface-variant text-xs uppercase tracking-wide">Phone</p>
+                    <p className="text-on-surface font-medium">{selected.guestPhone || '—'}</p>
                   </div>
                   <div className="space-y-0.5">
                     <p className="text-on-surface-variant text-xs uppercase tracking-wide">Check-in</p>

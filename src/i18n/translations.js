@@ -23,11 +23,15 @@ export const translations = {
       published: 'Published',
       draft: 'Draft',
     },
+    pieces: {
+      interior: 'Interior',
+      exterior: 'Exterior',
+    },
     hero: {
       tagline: 'Tunisian Spaces — Est. 2026',
-      headline1: 'Every space',
-      headline2: 'tells a',
-      headline3: 'story.',
+      headline1: 'Find',
+      headline2: 'your next',
+      headline3: 'location.',
       description: 'A curated index of Tunisia\'s most cinematic locations — from the cobalt coast of Sidi Bou Said to the red dunes of Tataouine. Booked by directors, photographers, and brands with taste.',
       exploreButton: 'Explore locations',
     },
@@ -386,9 +390,9 @@ export const translations = {
   fr: {
     hero: {
       tagline: 'Espaces Tunisiens — Fondé 2026',
-      headline1: 'Chaque espace',
-      headline2: 'raconte une',
-      headline3: 'histoire.',
+      headline1: 'Trouvez',
+      headline2: 'votre prochain',
+      headline3: 'lieu.',
       description: 'Un index curé de la Tunisie des lieux les plus cinématographiques — de la côte cobalt de Sidi Bou Said aux dunes rouges de Tataouine. Réservé par des réalisateurs, photographes et marques de goût.',
       exploreButton: 'Explorer les lieux',
     },
@@ -437,6 +441,10 @@ export const translations = {
       delete: 'Supprimer',
       published: 'Publié',
       draft: 'Brouillon',
+    },
+    pieces: {
+      interior: 'Intérieur',
+      exterior: 'Extérieur',
     },
     home: {
       searchEyebrow: 'Commencer la recherche',

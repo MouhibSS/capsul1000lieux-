@@ -14,8 +14,8 @@ export default function LocationMap({
   city,
   country = 'Tunisia',
   height = 520,
-  zoom = 14,
-  radius = 800,
+  zoom = 13,
+  radius = 2500,
 }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
@@ -81,29 +81,7 @@ export default function LocationMap({
         interactive: false,
       }).addTo(map)
 
-      // Inner brighter ring
-      L.circle([latitude, longitude], {
-        radius: radius * 0.45,
-        color: '#8B6F2E',
-        weight: 1.25,
-        opacity: 0.6,
-        fillColor: '#E8C98A',
-        fillOpacity: 0.18,
-        interactive: false,
-      }).addTo(map)
-
-      // Animated pulse marker
-      const pulseIcon = L.divIcon({
-        className: 'capsul-pulse-icon',
-        html: '<span class="capsul-pulse"></span><span class="capsul-pulse-mid"></span><span class="capsul-pulse-core"></span>',
-        iconSize: [28, 28],
-        iconAnchor: [14, 14],
-      })
-      L.marker([latitude, longitude], {
-        icon: pulseIcon,
-        interactive: false,
-        keyboard: false,
-      }).addTo(map)
+      // No center marker — privacy: caller cannot derive the exact spot.
 
       map.fitBounds(
         L.latLng(latitude, longitude).toBounds(radius * 2.6),

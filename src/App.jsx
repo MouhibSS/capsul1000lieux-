@@ -25,7 +25,6 @@ import Favorites from './pages/Favorites'
 import Bookings from './pages/Bookings'
 import Profile from './pages/Profile'
 import Login from './pages/Login'
-import Signup from './pages/Signup'
 import Maintenance from './pages/Maintenance'
 import Prelaunch from './pages/Prelaunch'
 
@@ -41,7 +40,6 @@ function AnimatedRoutes() {
         <Route path="/bookings" element={<Bookings />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
         <Route path="/list-space" element={<ListSpace />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />

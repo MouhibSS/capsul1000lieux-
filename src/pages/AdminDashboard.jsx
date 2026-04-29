@@ -14,10 +14,12 @@ import AdminBookings from '../sections/AdminBookings'
 import AdminAnalytics from '../sections/AdminAnalytics'
 import AdminFavorites from '../sections/AdminFavorites'
 import AdminMessages from '../sections/AdminMessages'
+import AdminSubmissions from '../sections/AdminSubmissions'
 
 const tabs = [
   { id: 'locations', label: 'Locations', icon: MapPin, desc: 'Manage listed spaces', accent: 'from-blue-500/20 to-cyan-500/10', dot: 'bg-blue-400' },
   { id: 'bookings', label: 'Bookings', icon: Calendar, desc: 'Requests & status', accent: 'from-orange-500/20 to-red-500/10', dot: 'bg-orange-400' },
+  { id: 'submissions', label: 'Submissions', icon: Mail, desc: 'User location submissions', accent: 'from-cyan-500/20 to-sky-500/10', dot: 'bg-cyan-400' },
   { id: 'messages', label: 'Messages', icon: MessageSquare, desc: 'Contact & support inbox', accent: 'from-gold/20 to-amber-500/10', dot: 'bg-gold' },
   { id: 'favorites', label: 'Favorites', icon: Heart, desc: 'User wishlist analytics', accent: 'from-pink-500/20 to-rose-500/10', dot: 'bg-pink-400' },
   { id: 'filters', label: 'Filters', icon: Settings, desc: 'Category management', accent: 'from-purple-500/20 to-violet-500/10', dot: 'bg-purple-400' },
@@ -405,6 +407,7 @@ export default function AdminDashboard() {
               {activeTab === 'locations' && <AdminLocations />}
               {activeTab === 'filters' && <AdminFilters />}
               {activeTab === 'bookings' && <AdminBookings />}
+              {activeTab === 'submissions' && <AdminSubmissions />}
               {activeTab === 'analytics' && <AdminAnalytics />}
               {activeTab === 'favorites' && <AdminFavorites />}
               {activeTab === 'messages' && <AdminMessages />}

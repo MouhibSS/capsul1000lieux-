@@ -1,18 +1,50 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
-import { Heart, Star, ArrowUpRight } from 'lucide-react'
+import { Heart, Star, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useFavoritesContext as useFavorites } from '../context/FavoritesContext'
+import { useLanguage } from '../context/LanguageContext'
+import { useLocationPieces } from '../hooks/useLocationPieces'
 
 const ease = [0.22, 1, 0.36, 1]
 
 export default function LocationCard({ location, index = 0 }) {
   const { toggle, isFavorite } = useFavorites()
+  const { lang } = useLanguage()
+  const { fetchPieces } = useLocationPieces()
   const [imgLoaded, setImgLoaded] = useState(false)
+  const [imgIndex, setImgIndex] = useState(0)
+  const [allImages, setAllImages] = useState([])
   const fav = isFavorite(location.id)
   const cardRef = useRef(null)
 
-  // 3D tilt — desktop only (disabled on coarse pointer)
+  useEffect(() => {
+    const loadImages = async () => {
+      const baseImages = location.images && location.images.length ? location.images : []
+      const pieces = await fetchPieces(location.id)
+
+      const combined = baseImages.map(url => ({ url, label: null }))
+
+      if (pieces && pieces.length > 0) {
+        pieces.forEach(piece => {
+          if (piece.image_urls && piece.image_urls.length > 0) {
+            const subsectionName = lang === 'fr' ? (piece.name_fr || piece.subsection) : (piece.name_en || piece.subsection)
+            piece.image_urls.forEach(url => {
+              combined.push({ url, label: subsectionName })
+            })
+          }
+        })
+      }
+
+      setAllImages(combined)
+    }
+
+    loadImages()
+  }, [location.id, lang, fetchPieces])
+
+  const images = allImages.length > 0 ? allImages.map(img => img.url) : []
+  const hasMany = images.length > 1
+
   const mx = useMotionValue(0)
   const my = useMotionValue(0)
   const springCfg = { stiffness: 200, damping: 18 }
@@ -32,6 +64,19 @@ export default function LocationCard({ location, index = 0 }) {
   }
 
   const handleMouseLeave = () => { mx.set(0); my.set(0) }
+
+  const goPrev = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setImgLoaded(false)
+    setImgIndex((i) => (i - 1 + images.length) % images.length)
+  }
+  const goNext = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setImgLoaded(false)
+    setImgIndex((i) => (i + 1) % images.length)
+  }
 
   return (
     <motion.div
@@ -62,17 +107,27 @@ export default function LocationCard({ location, index = 0 }) {
             {!imgLoaded && (
               <div className="absolute inset-0 animate-pulse" style={{ backgroundColor: location.fallback || '#1c1b1b' }} />
             )}
-            {location.images && location.images[0] && (
+            {images[imgIndex] && (
               <img
-                src={location.images[0]}
+                key={imgIndex}
+                src={images[imgIndex]}
                 alt={location.name}
                 loading="lazy"
                 onLoad={() => setImgLoaded(true)}
-                className={`w-full h-full object-cover img-mono transition-opacity duration-700 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+                className={`w-full h-full object-cover img-mono transition-opacity duration-500 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
               />
             )}
 
-            {/* Subtle glare that follows pointer — only visible on hover, desktop only */}
+            {/* Subsection label */}
+            {allImages[imgIndex]?.label && (
+              <div className="absolute top-0 left-0 right-0 px-3 py-2 bg-gradient-to-b from-black/60 to-transparent">
+                <p className="text-white text-xs font-semibold uppercase tracking-wider">
+                  {allImages[imgIndex].label}
+                </p>
+              </div>
+            )}
+
+            {/* Pointer-following glare (desktop) */}
             <motion.div
               className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300 mix-blend-overlay"
               style={{
@@ -83,7 +138,7 @@ export default function LocationCard({ location, index = 0 }) {
               }}
             />
 
-            {/* Index overlay */}
+            {/* Index */}
             <div className="absolute top-4 left-4 font-mono eyebrow-sm text-on-surface/80" style={{ transform: 'translateZ(24px)' }}>
               № {String(location.id).padStart(3, '0')}
             </div>
@@ -92,6 +147,42 @@ export default function LocationCard({ location, index = 0 }) {
             <div className="absolute top-4 right-4 flex gap-2" style={{ transform: 'translateZ(24px)' }}>
               {location.featured && <span className="chip-gold">Featured</span>}
             </div>
+
+            {/* Photo swipe arrows */}
+            {hasMany && (
+              <>
+                <button
+                  type="button"
+                  onClick={goPrev}
+                  aria-label="Previous photo"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center bg-bg/55 backdrop-blur text-on-surface hover:bg-bg/80 hover:text-gold opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ transform: 'translateY(-50%) translateZ(30px)' }}
+                >
+                  <ChevronLeft className="w-4 h-4" strokeWidth={1.5} />
+                </button>
+                <button
+                  type="button"
+                  onClick={goNext}
+                  aria-label="Next photo"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center bg-bg/55 backdrop-blur text-on-surface hover:bg-bg/80 hover:text-gold opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ transform: 'translateY(-50%) translateZ(30px)' }}
+                >
+                  <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
+                </button>
+                {/* Dots */}
+                <div
+                  className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5"
+                  style={{ transform: 'translateX(-50%) translateZ(30px)' }}
+                >
+                  {images.map((_, i) => (
+                    <span
+                      key={i}
+                      className={`w-1.5 h-1.5 rounded-full transition-colors ${i === imgIndex ? 'bg-gold' : 'bg-on-surface/40'}`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
 
             {/* Favorite */}
             <button
@@ -108,13 +199,18 @@ export default function LocationCard({ location, index = 0 }) {
               <Heart className="w-3.5 h-3.5" fill={fav ? 'currentColor' : 'none'} strokeWidth={1.5} />
             </button>
 
-            {/* Hover arrow */}
-            <div
-              className="absolute bottom-4 right-4 w-10 h-10 bg-gold text-bg flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500"
+            {/* Yellow arrow → opens detail in NEW TAB */}
+            <a
+              href={`/location/${location.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              aria-label="Open in new tab"
+              className="absolute bottom-4 right-4 w-10 h-10 bg-gold text-bg flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 hover:bg-gold-light"
               style={{ transform: 'translateZ(30px)' }}
             >
               <ArrowUpRight className="w-4 h-4" strokeWidth={1.5} />
-            </div>
+            </a>
           </div>
 
           {/* Info */}

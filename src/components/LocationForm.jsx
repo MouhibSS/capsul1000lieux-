@@ -1,15 +1,12 @@
 import { useState, useEffect } from 'react'
-import { filterCategories } from '../data/locations'
+import { supabase } from '../lib/supabase'
+import { X } from 'lucide-react'
 
-// Extract lat/lng from a Google Maps URL or raw "lat, lng" paste.
-// Short links (maps.app.goo.gl, goo.gl/maps) cannot be resolved
-// client-side — admin must open them and paste the resulting full URL.
 function parseGoogleMapsUrl(input) {
   if (!input) return null
   const raw = String(input).trim()
   if (!raw) return null
 
-  // Raw "lat, lng" or "lat lng"
   const rawCoords = raw.match(/^\s*(-?\d{1,3}(?:\.\d+)?)[,\s]+(-?\d{1,3}(?:\.\d+)?)\s*$/)
   if (rawCoords) {
     const lat = parseFloat(rawCoords[1])
@@ -19,9 +16,9 @@ function parseGoogleMapsUrl(input) {
   }
 
   const patterns = [
-    /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,        // embedded place data (preferred)
-    /!8m2!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,    // newer place data
-    /@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,            // /@36.85,10.21,17z
+    /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,
+    /!8m2!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,
+    /@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
     /[?&]query=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
     /[?&]q=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
     /[?&]q=loc:(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
@@ -46,37 +43,17 @@ function isShortMapsLink(input) {
   return /^https?:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(String(input).trim())
 }
 
-const locationTypes = ['villa', 'loft', 'studio', 'rooftop', 'mansion', 'penthouse', 'industrial']
 const cities = ['Tunis', 'Sidi Bou Said', 'La Marsa', 'Hammamet', 'Sousse', 'Djerba', 'Tozeur', 'Kairouan', 'Tataouine', 'Matmata', 'Carthage', 'Nabeul']
-const architectureStyles = ['tunisian', 'colonial', 'mediterranean', 'brutalist', 'industrial', 'seventies']
-
-// Flatten place type paths for select options
-const getPlaceTypePaths = () => {
-  const paths = []
-
-  const traverse = (node, key, path = []) => {
-    const currentPath = [...path, key]
-    if (!node.children || Object.keys(node.children).length === 0) {
-      paths.push({
-        value: currentPath,
-        label: node.label,
-        fullPath: currentPath.join(' > ')
-      })
-    } else {
-      Object.entries(node.children).forEach(([childKey, childNode]) => {
-        traverse(childNode, childKey, currentPath)
-      })
-    }
-  }
-
-  Object.entries(filterCategories.placeType.children).forEach(([key, node]) => {
-    traverse(node, key)
-  })
-
-  return paths
-}
 
 export default function LocationForm({ initialData, onSubmit, onCancel }) {
+  const [filterCategories, setFilterCategories] = useState({
+    placeTypes: [],
+    architectureStyles: [],
+    decorationStyles: [],
+    amenities: [],
+  })
+  const [categoriesLoading, setCategoriesLoading] = useState(true)
+
   const emptyForm = {
     name: '',
     city: '',
@@ -92,24 +69,66 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
     longitude: '',
     google_maps_link: '',
     tags: '',
-    amenities: '',
+    amenities: [],
     image_urls: '',
     featured: false,
     trending: false,
-    status: 'draft', // 'draft' | 'published' | 'archived'
+    status: 'draft',
     specs: '{}',
     fallback: '',
-    place_type_path: [],
-    architecture_style: '',
+    place_type_keys: [],
+    architecture_style_keys: [],
+    decoration_style_keys: [],
   }
 
   const [form, setForm] = useState(emptyForm)
   const [errors, setErrors] = useState({})
   const [mapsUrl, setMapsUrl] = useState('')
-  const [mapsHint, setMapsHint] = useState(null) // { type: 'ok'|'warn'|'error', msg: string }
+  const [mapsHint, setMapsHint] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
-  const placeTypePaths = getPlaceTypePaths()
+
+  // Fetch filter categories from Supabase
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('filter_categories')
+          .select('key, label, category_type')
+          .eq('enabled', true)
+          .order('display_order', { ascending: true })
+
+        if (error) throw error
+
+        const grouped = {
+          placeTypes: [],
+          architectureStyles: [],
+          decorationStyles: [],
+          amenities: [],
+        }
+
+        data?.forEach(cat => {
+          if (cat.category_type === 'placeType') {
+            grouped.placeTypes.push({ key: cat.key, label: cat.label })
+          } else if (cat.category_type === 'architectureStyle') {
+            grouped.architectureStyles.push({ key: cat.key, label: cat.label })
+          } else if (cat.category_type === 'decorationStyle') {
+            grouped.decorationStyles.push({ key: cat.key, label: cat.label })
+          } else if (cat.category_type === 'amenity') {
+            grouped.amenities.push({ key: cat.key, label: cat.label })
+          }
+        })
+
+        setFilterCategories(grouped)
+      } catch (err) {
+        console.error('Error fetching filter categories:', err)
+      } finally {
+        setCategoriesLoading(false)
+      }
+    }
+
+    fetchCategories()
+  }, [])
 
   useEffect(() => {
     if (initialData) {
@@ -129,7 +148,7 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
         longitude: initialData.longitude || '',
         google_maps_link: initialData.google_maps_link || '',
         tags: Array.isArray(initialData.tags) ? initialData.tags.join(', ') : initialData.tags || '',
-        amenities: Array.isArray(initialData.amenities) ? initialData.amenities.join(', ') : initialData.amenities || '',
+        amenities: Array.isArray(initialData.amenities) ? initialData.amenities : [],
         image_urls: Array.isArray(initialData.image_urls) ? initialData.image_urls.join(', ') : initialData.image_urls || '',
         featured: Boolean(initialData.featured),
         trending: Boolean(initialData.trending),
@@ -140,8 +159,9 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
           : 'draft',
         specs: initialData.specs ? JSON.stringify(initialData.specs) : '{}',
         fallback: initialData.fallback || '',
-        place_type_path: Array.isArray(initialData.place_type_path) ? initialData.place_type_path : [],
-        architecture_style: initialData.architecture_style || '',
+        place_type_keys: Array.isArray(initialData.place_type_keys) ? initialData.place_type_keys : [],
+        architecture_style_keys: Array.isArray(initialData.architecture_style_keys) ? initialData.architecture_style_keys : [],
+        decoration_style_keys: Array.isArray(initialData.decoration_style_keys) ? initialData.decoration_style_keys : [],
       })
     } else {
       setForm(emptyForm)
@@ -193,7 +213,6 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
     const newErrors = {}
     if (!form.name) newErrors.name = 'Name is required'
     if (!form.city) newErrors.city = 'City is required'
-    if (!form.type) newErrors.type = 'Type is required'
     if (form.price === '' || form.price === null || form.price === undefined) newErrors.price = 'Price is required'
     if (form.latitude === '' || form.latitude === null || form.latitude === undefined) newErrors.latitude = 'Latitude is required'
     if (form.longitude === '' || form.longitude === null || form.longitude === undefined) newErrors.longitude = 'Longitude is required'
@@ -222,8 +241,6 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
       }
     }
 
-    // Build payload. Optional columns (archived/place_type_path/architecture_style/google_maps_link)
-    // may not exist in older schemas — they get auto-stripped on retry below.
     const data = {
       name: form.name,
       city: form.city,
@@ -240,7 +257,7 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
       longitude: parseFloat(form.longitude),
       google_maps_link: form.google_maps_link || null,
       tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
-      amenities: form.amenities ? form.amenities.split(',').map(a => a.trim()).filter(Boolean) : [],
+      amenities: form.amenities || [],
       image_urls: form.image_urls ? form.image_urls.split(',').map(u => u.trim()).filter(Boolean) : [],
       featured: form.featured,
       trending: form.trending,
@@ -248,14 +265,14 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
       archived: form.status === 'archived',
       specs,
       fallback: form.fallback,
-      place_type_path: form.place_type_path && form.place_type_path.length > 0 ? form.place_type_path : null,
-      architecture_style: form.architecture_style || null,
+      place_type_keys: form.place_type_keys && form.place_type_keys.length > 0 ? form.place_type_keys : [],
+      architecture_style_keys: form.architecture_style_keys && form.architecture_style_keys.length > 0 ? form.architecture_style_keys : [],
+      decoration_style_keys: form.decoration_style_keys && form.decoration_style_keys.length > 0 ? form.decoration_style_keys : [],
     }
 
     console.log('[LocationForm] Submitting payload:', data)
 
-    // Auto-retry without optional columns if schema doesn't have them yet.
-    const optional = ['archived', 'place_type_path', 'architecture_style', 'google_maps_link']
+    const optional = ['place_type_keys', 'architecture_style_keys', 'decoration_style_keys', 'google_maps_link']
 
     const attempt = async (payload) => {
       try {
@@ -316,14 +333,7 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
             </select>
             {errors.city && <p className="text-red-400 text-xs mt-0.5">{errors.city}</p>}
           </div>
-          <div>
-            <label className={labelClass}>Type *</label>
-            <select value={form.type} onChange={(e) => set('type', e.target.value)} className={`${inputClass} ${errors.type ? 'border-red-500' : ''}`}>
-              <option value="">Select type</option>
-              {locationTypes.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-            {errors.type && <p className="text-red-400 text-xs mt-0.5">{errors.type}</p>}
-          </div>
+          {/* Type is now handled via place_type_keys in Filters section */}
           <div>
             <label className={labelClass}>Price (€) *</label>
             <input
@@ -341,37 +351,156 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
 
       {/* Filters */}
       <div>
-        <h3 className="text-sm font-light text-on-surface mb-2 uppercase tracking-wide">Filters</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <h3 className="text-sm font-light text-on-surface mb-2 uppercase tracking-wide">Filters (from Supabase)</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* Place Types */}
           <div>
-            <label className={labelClass}>Place Type</label>
-            <select
-              value={form.place_type_path.join('|')}
-              onChange={(e) => {
-                if (e.target.value) {
-                  set('place_type_path', e.target.value.split('|'))
-                } else {
-                  set('place_type_path', [])
-                }
-              }}
-              className={inputClass}
-            >
-              <option value="">Select category</option>
-              {placeTypePaths.map((path, idx) => (
-                <option key={idx} value={path.value.join('|')}>
-                  {path.fullPath}
-                </option>
-              ))}
-            </select>
+            <label className={labelClass}>Place Types</label>
+            {categoriesLoading ? (
+              <div className="text-xs text-on-surface-variant italic">Loading...</div>
+            ) : (
+              <div className="space-y-1">
+                {filterCategories.placeTypes.length === 0 ? (
+                  <p className="text-xs text-on-surface-variant italic">No place types available</p>
+                ) : (
+                  <select
+                    multiple
+                    value={form.place_type_keys}
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.selectedOptions, opt => opt.value)
+                      set('place_type_keys', selected)
+                    }}
+                    className={`${inputClass} min-h-32`}
+                  >
+                    {filterCategories.placeTypes.map(pt => (
+                      <option key={pt.key} value={pt.key}>
+                        {pt.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {form.place_type_keys.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {form.place_type_keys.map(key => {
+                      const label = filterCategories.placeTypes.find(pt => pt.key === key)?.label
+                      return (
+                        <span key={key} className="inline-flex items-center gap-1 bg-gold/20 text-gold text-xs px-2 py-1 rounded">
+                          {label}
+                          <button
+                            type="button"
+                            onClick={() => set('place_type_keys', form.place_type_keys.filter(k => k !== key))}
+                            className="hover:opacity-70"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
+
+          {/* Architecture Styles */}
           <div>
-            <label className={labelClass}>Architecture Style</label>
-            <select value={form.architecture_style} onChange={(e) => set('architecture_style', e.target.value)} className={inputClass}>
-              <option value="">None</option>
-              {architectureStyles.map(a => <option key={a} value={a}>{a}</option>)}
-            </select>
+            <label className={labelClass}>Architecture Styles</label>
+            {categoriesLoading ? (
+              <div className="text-xs text-on-surface-variant italic">Loading...</div>
+            ) : (
+              <div className="space-y-1">
+                {filterCategories.architectureStyles.length === 0 ? (
+                  <p className="text-xs text-on-surface-variant italic">No styles available</p>
+                ) : (
+                  <select
+                    multiple
+                    value={form.architecture_style_keys}
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.selectedOptions, opt => opt.value)
+                      set('architecture_style_keys', selected)
+                    }}
+                    className={`${inputClass} min-h-32`}
+                  >
+                    {filterCategories.architectureStyles.map(as => (
+                      <option key={as.key} value={as.key}>
+                        {as.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {form.architecture_style_keys.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {form.architecture_style_keys.map(key => {
+                      const label = filterCategories.architectureStyles.find(as => as.key === key)?.label
+                      return (
+                        <span key={key} className="inline-flex items-center gap-1 bg-gold/20 text-gold text-xs px-2 py-1 rounded">
+                          {label}
+                          <button
+                            type="button"
+                            onClick={() => set('architecture_style_keys', form.architecture_style_keys.filter(k => k !== key))}
+                            className="hover:opacity-70"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Decoration Styles */}
+          <div>
+            <label className={labelClass}>Decoration Styles</label>
+            {categoriesLoading ? (
+              <div className="text-xs text-on-surface-variant italic">Loading...</div>
+            ) : (
+              <div className="space-y-1">
+                {filterCategories.decorationStyles.length === 0 ? (
+                  <p className="text-xs text-on-surface-variant italic">No styles available</p>
+                ) : (
+                  <select
+                    multiple
+                    value={form.decoration_style_keys}
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.selectedOptions, opt => opt.value)
+                      set('decoration_style_keys', selected)
+                    }}
+                    className={`${inputClass} min-h-32`}
+                  >
+                    {filterCategories.decorationStyles.map(ds => (
+                      <option key={ds.key} value={ds.key}>
+                        {ds.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {form.decoration_style_keys.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {form.decoration_style_keys.map(key => {
+                      const label = filterCategories.decorationStyles.find(ds => ds.key === key)?.label
+                      return (
+                        <span key={key} className="inline-flex items-center gap-1 bg-gold/20 text-gold text-xs px-2 py-1 rounded">
+                          {label}
+                          <button
+                            type="button"
+                            onClick={() => set('decoration_style_keys', form.decoration_style_keys.filter(k => k !== key))}
+                            className="hover:opacity-70"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
+        <p className="text-[10px] text-on-surface-variant mt-2">Hold Ctrl/Cmd to select multiple options. Selected items appear as tags below.</p>
       </div>
 
       {/* Description */}
@@ -501,14 +630,51 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
             />
           </div>
           <div>
-            <label className={labelClass}>Amenities (comma-separated)</label>
-            <input
-              type="text"
-              value={form.amenities}
-              onChange={(e) => set('amenities', e.target.value)}
-              className={inputClass}
-              placeholder="WiFi, Parking, Natural Light"
-            />
+            <label className={labelClass}>Amenities</label>
+            {categoriesLoading ? (
+              <div className="text-xs text-on-surface-variant italic">Loading...</div>
+            ) : (
+              <div className="space-y-1">
+                {filterCategories.amenities.length === 0 ? (
+                  <p className="text-xs text-on-surface-variant italic">No amenities available</p>
+                ) : (
+                  <select
+                    multiple
+                    value={form.amenities}
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.selectedOptions, opt => opt.value)
+                      set('amenities', selected)
+                    }}
+                    className={`${inputClass} min-h-32`}
+                  >
+                    {filterCategories.amenities.map(am => (
+                      <option key={am.key} value={am.key}>
+                        {am.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {form.amenities.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {form.amenities.map(key => {
+                      const label = filterCategories.amenities.find(am => am.key === key)?.label
+                      return (
+                        <span key={key} className="inline-flex items-center gap-1 bg-gold/20 text-gold text-xs px-2 py-1 rounded">
+                          {label}
+                          <button
+                            type="button"
+                            onClick={() => set('amenities', form.amenities.filter(k => k !== key))}
+                            className="hover:opacity-70"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <div>
             <label className={labelClass}>Image URLs (comma-separated)</label>
