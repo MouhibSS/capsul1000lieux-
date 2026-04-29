@@ -13,7 +13,7 @@ export default function LanguageModal() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6, ease }}
-      className="fixed inset-0 bg-gradient-to-br from-bg via-bg to-surface-low backdrop-blur-xl z-50 flex items-center justify-center"
+      className="fixed inset-0 bg-gradient-to-br from-bg via-bg to-surface-low backdrop-blur-xl z-[9999] flex items-center justify-center"
     >
       <div className="container-main max-w-2xl text-center">
         <motion.div
