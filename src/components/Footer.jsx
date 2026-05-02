@@ -19,7 +19,7 @@ export default function Footer() {
       { label: t.indexRooftops, href: '/explore?type=rooftop' },
     ],
     [t.studioLabel]: [
-      { label: t.studioAboutCapsul, href: '/about' },
+      { label: t.studioProjects || 'Projects', href: '/projects' },
       { label: t.studioListSpace, href: '/list-space' },
       { label: t.studioContact, href: '/contact' },
       { label: t.studioPress, href: '/contact' },

@@ -81,6 +81,10 @@ export default function AdminLocations() {
       if (!data || data.length === 0) {
         throw new Error('No rows updated. Check RLS policy on the locations table — the anon key may not have UPDATE permission.')
       }
+      // Update viewing location if it's currently being viewed
+      if (viewingLocation?.id === editingLocation.id) {
+        setViewingLocation(data[0])
+      }
     } else {
       console.log('[AdminLocations] INSERT payload=', formData)
       const { data, error } = await supabase

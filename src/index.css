@@ -48,23 +48,7 @@
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: 'cv11', 'ss01';
     overflow-x: hidden;
-    cursor: none;
-  }
-
-  body:has(.dashboard-root), body.dashboard-active {
     cursor: auto;
-  }
-  body:has(.dashboard-root) *, body.dashboard-active * {
-    cursor: auto;
-  }
-  body:has(.dashboard-root) a, body.dashboard-active a,
-  body:has(.dashboard-root) button, body.dashboard-active button,
-  body:has(.dashboard-root) [role="button"], body.dashboard-active [role="button"] {
-    cursor: pointer;
-  }
-  body:has(.dashboard-root) input, body.dashboard-active input,
-  body:has(.dashboard-root) textarea, body.dashboard-active textarea {
-    cursor: text;
   }
 
   ::-webkit-scrollbar { width: 4px; }
@@ -246,45 +230,6 @@
     will-change: transform;
   }
   .lift:hover { transform: translateY(-6px); }
-
-  /* Custom cursor layers */
-  .cursor-dot {
-    pointer-events: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #E5C483;
-    z-index: 9999;
-    will-change: transform;
-    transition: background 0.3s ease, opacity 0.25s ease;
-    mix-blend-mode: difference;
-  }
-  .cursor-ring {
-    pointer-events: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    border: 1px solid rgba(200,169,106,0.55);
-    z-index: 9998;
-    will-change: transform, border-color, background;
-    transition: border-color 0.3s ease, background 0.3s ease, opacity 0.25s ease;
-  }
-  .cursor-dot.hovered { background: #C8A96A; }
-  .cursor-ring.hovered {
-    border-color: rgba(200,169,106,0.9);
-    background: rgba(200,169,106,0.08);
-  }
-
-  @media (pointer: coarse) {
-    .cursor-dot, .cursor-ring { display: none !important; }
-    body { cursor: auto !important; }
-  }
 
   /* Divider */
   .hr-gold {

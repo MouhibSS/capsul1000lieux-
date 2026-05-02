@@ -5,6 +5,7 @@ import {
   ChevronLeft, ChevronRight, Image as ImageIcon,
 } from 'lucide-react'
 import { useState } from 'react'
+import { useAmenities } from '../hooks/useAmenities'
 import LocationMap from './LocationMap'
 import AdminLocationPieces from '../sections/AdminLocationPieces'
 
@@ -23,6 +24,7 @@ function statusOf(loc) {
 export default function AdminLocationDetail({ location, onClose, onEdit, onDelete }) {
   const [imgIndex, setImgIndex] = useState(0)
   const [showPieces, setShowPieces] = useState(false)
+  const { getLabel: getAmenityLabel } = useAmenities()
   const images = location.image_urls || []
   const status = STATUS_STYLE[statusOf(location)]
   const StatusIcon = status.icon
@@ -213,13 +215,25 @@ export default function AdminLocationDetail({ location, onClose, onEdit, onDelet
               </div>
             )}
 
-            {/* Stats grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <Stat icon={Maximize2} label="Surface" value={location.area ? `${location.area} m²` : '—'} />
-              <Stat icon={Users} label="Capacity" value={location.capacity ? `${location.capacity} pax` : '—'} />
-              <Stat icon={Home} label="Type" value={location.type || '—'} capitalize />
-              <Stat icon={Star} label="Rating" value={location.rating ? `${location.rating} ★` : '—'} />
-            </div>
+            {/* Dynamic stats grid */}
+            {(() => {
+              const stats = []
+              if (location.area) stats.push({ icon: Maximize2, label: 'Surface', value: `${location.area} m²`, tags: null })
+              if (location.capacity) stats.push({ icon: Users, label: 'Capacity', value: `${location.capacity} pax`, tags: null })
+              if (location.type) stats.push({ icon: Home, label: 'Type', value: location.type, tags: null })
+              if (location.place_type_keys?.length > 0) stats.push({ icon: Home, label: 'Type de lieu', value: null, tags: location.place_type_keys, format: (k) => k.replace('type_', '').replace(/_/g, ' ') })
+              if (location.architecture_style_keys?.length > 0) stats.push({ icon: Home, label: 'Architecture', value: null, tags: location.architecture_style_keys, format: (k) => k.replace('arch_', '').replace(/_/g, ' ') })
+              if (location.decoration_style_keys?.length > 0) stats.push({ icon: Sparkles, label: 'Décoration', value: null, tags: location.decoration_style_keys, format: (k) => k.replace('deco_', '').replace(/_/g, ' ') })
+              if (location.max_persons_keys?.length > 0) stats.push({ icon: Users, label: 'Nb personnes', value: null, tags: location.max_persons_keys, format: (k) => k.replace('max_persons_', '').replace(/_/g, ' ') })
+              if (location.type_de_demande_keys?.length > 0) stats.push({ icon: Tag, label: 'Type demande', value: null, tags: location.type_de_demande_keys, format: (k) => k.replace('type_demande_', '').charAt(0).toUpperCase() + k.replace('type_demande_', '').slice(1) })
+              return (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {stats.map((stat, idx) => (
+                    <Stat key={idx} icon={stat.icon} label={stat.label} value={stat.value} tags={stat.tags} format={stat.format} />
+                  ))}
+                </div>
+              )
+            })()}
 
             {/* Tags + Amenities */}
             {(location.tags?.length > 0 || location.amenities?.length > 0) && (
@@ -248,7 +262,7 @@ export default function AdminLocationDetail({ location, onClose, onEdit, onDelet
                     <div className="flex flex-wrap gap-1.5">
                       {location.amenities.map(a => (
                         <span key={a} className="px-2 py-1 bg-surface-low text-on-surface border border-outline-variant/30 rounded text-xs">
-                          {a}
+                          {getAmenityLabel(a)}
                         </span>
                       ))}
                     </div>
@@ -342,16 +356,28 @@ export default function AdminLocationDetail({ location, onClose, onEdit, onDelet
   )
 }
 
-function Stat({ icon: Icon, label, value, capitalize }) {
+function Stat({ icon: Icon, label, value, tags, format }) {
   return (
     <div className="bg-surface-low border border-outline-variant/25 rounded-lg p-2.5 sm:p-3">
-      <div className="flex items-center gap-1.5 mb-1">
+      <div className="flex items-center gap-1.5 mb-2">
         <Icon className="w-3 h-3 text-gold" strokeWidth={1.75} />
         <p className="text-[10px] uppercase tracking-wider text-on-surface-variant">{label}</p>
       </div>
-      <p className={`font-display text-base sm:text-lg font-light text-on-surface ${capitalize ? 'capitalize' : ''}`}>
-        {value}
-      </p>
+      {value ? (
+        <p className="font-display text-base sm:text-lg font-light text-on-surface capitalize">
+          {value}
+        </p>
+      ) : tags ? (
+        <div className="flex flex-wrap gap-1">
+          {tags.map((tag, idx) => (
+            <span key={idx} className="text-[10px] px-1.5 py-0.5 bg-gold/20 text-gold rounded border border-gold/40 whitespace-nowrap">
+              {format ? format(tag) : tag}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-on-surface-variant">—</p>
+      )}
     </div>
   )
 }

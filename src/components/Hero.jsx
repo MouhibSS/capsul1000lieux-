@@ -2,6 +2,7 @@ import { motion, useScroll, useTransform } from 'framer-motion'
 import { useRef } from 'react'
 import { Sparkles } from 'lucide-react'
 import { useTranslation } from '../context/LanguageContext'
+import TunisianTime from './TunisianTime'
 
 const ease = [0.22, 1, 0.36, 1]
 
@@ -184,16 +185,26 @@ export default function Hero() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease, delay: 0.1 }}
-            className="hidden md:flex items-center gap-3"
+            className="hidden md:flex flex-col items-end gap-2"
           >
-            <div className="flex items-center gap-2 px-3 py-1.5 border border-gold/30 bg-gold/5 backdrop-blur-sm rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
-              <span className="eyebrow-sm text-gold">1,000+ spaces curated</span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3 py-1.5 border border-gold/30 bg-gold/5 backdrop-blur-sm rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
+                <span className="eyebrow-sm text-gold">1,000+ spaces curated</span>
+              </div>
+              <div className="hidden lg:flex items-center gap-2 eyebrow-sm text-on-surface-variant">
+                <Sparkles className="w-3 h-3 text-gold" strokeWidth={1.5} />
+                Vetted by scouts
+              </div>
             </div>
-            <div className="hidden lg:flex items-center gap-2 eyebrow-sm text-on-surface-variant">
-              <Sparkles className="w-3 h-3 text-gold" strokeWidth={1.5} />
-              Vetted by scouts
-            </div>
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, ease, delay: 0.3 }}
+              className="px-3 py-1.5 border border-outline-variant/30 bg-bg/40 backdrop-blur-sm rounded-full"
+            >
+              <TunisianTime />
+            </motion.div>
           </motion.div>
         </div>
 

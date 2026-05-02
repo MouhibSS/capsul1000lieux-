@@ -26,13 +26,15 @@ export default function Explore() {
   const { locations, loading } = useLocations()
 
   const [filters, setFilters] = useState(() => ({
-    governorates:  parseList(params.get('governorate')),
-    cities:        parseList(params.get('city')),
-    types:         parseList(params.get('type')),
-    architectures: parseList(params.get('architecture')),
-    decorations:   parseList(params.get('decoration')),
-    budgets:       parseList(params.get('budget')),
-    keyword:       params.get('q') || '',
+    governorates:   parseList(params.get('governorate')),
+    cities:         parseList(params.get('city')),
+    types:          parseList(params.get('type')),
+    architectures:  parseList(params.get('architecture')),
+    decorations:    parseList(params.get('decoration')),
+    budgets:        parseList(params.get('budget')),
+    typeDemande:    parseList(params.get('typedemande')),
+    maxPersons:     parseList(params.get('maxpersons')),
+    keyword:        params.get('q') || '',
   }))
 
   const [sort, setSort] = useState('Recommended')
@@ -41,13 +43,15 @@ export default function Explore() {
   // Sync filters → URL
   useEffect(() => {
     const next = new URLSearchParams()
-    if (filters.governorates.length)  next.set('governorate',  filters.governorates.join(','))
-    if (filters.cities.length)        next.set('city',         filters.cities.join(','))
-    if (filters.types.length)         next.set('type',         filters.types.join(','))
-    if (filters.architectures.length) next.set('architecture', filters.architectures.join(','))
-    if (filters.decorations.length)   next.set('decoration',   filters.decorations.join(','))
-    if (filters.budgets.length)       next.set('budget',       filters.budgets.join(','))
-    if (filters.keyword)              next.set('q',            filters.keyword)
+    if (filters.governorates.length)  next.set('governorate',   filters.governorates.join(','))
+    if (filters.cities.length)        next.set('city',          filters.cities.join(','))
+    if (filters.types.length)         next.set('type',          filters.types.join(','))
+    if (filters.architectures.length) next.set('architecture',  filters.architectures.join(','))
+    if (filters.decorations.length)   next.set('decoration',    filters.decorations.join(','))
+    if (filters.budgets.length)       next.set('budget',        filters.budgets.join(','))
+    if (filters.typeDemande.length)   next.set('typedemande',   filters.typeDemande.join(','))
+    if (filters.maxPersons.length)    next.set('maxpersons',    filters.maxPersons.join(','))
+    if (filters.keyword)              next.set('q',             filters.keyword)
     setParams(next, { replace: true })
   }, [filters, setParams])
 
@@ -65,10 +69,11 @@ export default function Explore() {
   const totalActive =
     filters.governorates.length + filters.cities.length + filters.types.length +
     filters.architectures.length + filters.decorations.length + filters.budgets.length +
+    filters.typeDemande.length + filters.maxPersons.length +
     (filters.keyword ? 1 : 0)
 
   const clearAll = () => setFilters({
-    governorates: [], cities: [], types: [], architectures: [], decorations: [], budgets: [], keyword: '',
+    governorates: [], cities: [], types: [], architectures: [], decorations: [], budgets: [], typeDemande: [], maxPersons: [], keyword: '',
   })
 
   return (

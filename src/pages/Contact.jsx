@@ -31,6 +31,10 @@ export default function Contact() {
   useEffect(() => {
     const type = searchParams.get('type')
     if (type === 'support') set('reason', 'Support')
+    else if (type === 'booking') set('reason', 'Book a space')
+    else if (type === 'list') set('reason', 'List my space')
+    else if (type === 'partnership') set('reason', 'Partnership')
+    else if (type === 'press') set('reason', 'Press inquiry')
   }, [])
 
   const handleSubmit = async (e) => {

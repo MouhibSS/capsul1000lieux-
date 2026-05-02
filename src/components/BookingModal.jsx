@@ -2,22 +2,8 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, ChevronDown, Sun, Sunset, CalendarDays, Calendar } from 'lucide-react'
 import { useBookings } from '../hooks/useBookings'
+import { useFilterOptions } from '../hooks/useFilterOptions'
 import ThemedCalendar from './ThemedCalendar'
-
-const EVENT_TYPES = [
-  'Photo shoot',
-  'Film / Video production',
-  'Brand campaign',
-  'Editorial',
-  'Influencer shoot',
-  'Wedding',
-  'Birthday',
-  'Corporate event',
-  'Conference / Seminar',
-  'Private party',
-  'Music video',
-  'Other',
-]
 
 function formatDate(s) {
   if (!s) return ''
@@ -28,6 +14,7 @@ function formatDate(s) {
 
 export default function BookingModal({ isOpen, onClose, location, selectedDate, selectedRange }) {
   const { createBooking, loading } = useBookings()
+  const { filters } = useFilterOptions()
 
   // Date selection
   const [startDate, setStartDate] = useState('')
@@ -36,7 +23,7 @@ export default function BookingModal({ isOpen, onClose, location, selectedDate, 
   const [dayPart, setDayPart] = useState('morning')
 
   // Guest info
-  const [guests, setGuests] = useState(1)
+  const [guests, setGuests] = useState('')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -45,6 +32,20 @@ export default function BookingModal({ isOpen, onClose, location, selectedDate, 
 
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
+
+  // Get available event types and max persons for this location
+  const availableEventTypes = location?.type_de_demande_keys || []
+  const availableMaxPersons = location?.max_persons_keys || []
+
+  // Get label for event type key
+  const getEventTypeLabel = (key) => {
+    return filters.typeDemande.find(t => t.key === key)?.label || key
+  }
+
+  // Get label for max persons key
+  const getMaxPersonsLabel = (key) => {
+    return filters.maxPersons.find(m => m.key === key)?.label || key
+  }
 
   // Initialize dates from props
   useEffect(() => {
@@ -95,8 +96,8 @@ export default function BookingModal({ isOpen, onClose, location, selectedDate, 
       return
     }
 
-    if (!fullName.trim() || !email.trim() || !phone.trim() || !eventType) {
-      setError('Veuillez renseigner nom, email, téléphone et type d\'événement.')
+    if (!fullName.trim() || !email.trim() || !phone.trim() || !eventType || !guests) {
+      setError('Veuillez renseigner tous les champs obligatoires.')
       return
     }
 
@@ -112,7 +113,7 @@ export default function BookingModal({ isOpen, onClose, location, selectedDate, 
         guestPhone: phone,
         eventType,
         eventDescription: description,
-        numGuests: guests,
+        maxPersonsKey: guests,
         totalPrice,
       })
       setSuccess(true)
@@ -126,7 +127,7 @@ export default function BookingModal({ isOpen, onClose, location, selectedDate, 
         setPhone('')
         setEventType('')
         setDescription('')
-        setGuests(1)
+        setGuests('')
         setDuration('full')
         setDayPart('morning')
       }, 2200)
@@ -309,7 +310,7 @@ export default function BookingModal({ isOpen, onClose, location, selectedDate, 
                     />
                   </Field>
 
-                  <Field label="Type d'événement *">
+                  <Field label="Type de demande *">
                     <div className="relative">
                       <select
                         value={eventType}
@@ -318,7 +319,9 @@ export default function BookingModal({ isOpen, onClose, location, selectedDate, 
                         className="w-full appearance-none px-3 py-2.5 pr-9 text-sm bg-bg border border-outline-variant/40 rounded text-on-surface outline-none focus:border-gold transition-colors"
                       >
                         <option value="">— Sélectionnez —</option>
-                        {EVENT_TYPES.map((t) => (<option key={t} value={t}>{t}</option>))}
+                        {availableEventTypes.map((key) => (
+                          <option key={key} value={key}>{getEventTypeLabel(key)}</option>
+                        ))}
                       </select>
                       <ChevronDown className="w-3.5 h-3.5 text-on-surface-variant absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={1.5} />
                     </div>
@@ -334,15 +337,21 @@ export default function BookingModal({ isOpen, onClose, location, selectedDate, 
                     />
                   </Field>
 
-                  <Field label="Nombre de personnes">
-                    <input
-                      type="number"
-                      min="1"
-                      max="500"
-                      value={guests}
-                      onChange={(e) => setGuests(parseInt(e.target.value) || 1)}
-                      className="w-full px-3 py-2.5 text-sm bg-bg border border-outline-variant/40 rounded text-on-surface outline-none focus:border-gold transition-colors"
-                    />
+                  <Field label="Nombre de personnes *">
+                    <div className="relative">
+                      <select
+                        value={guests}
+                        onChange={(e) => setGuests(e.target.value)}
+                        required
+                        className="w-full appearance-none px-3 py-2.5 pr-9 text-sm bg-bg border border-outline-variant/40 rounded text-on-surface outline-none focus:border-gold transition-colors"
+                      >
+                        <option value="">— Sélectionnez —</option>
+                        {availableMaxPersons.map((key) => (
+                          <option key={key} value={key}>{getMaxPersonsLabel(key)}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="w-3.5 h-3.5 text-on-surface-variant absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={1.5} />
+                    </div>
                   </Field>
 
                   {total > 0 && (
@@ -365,7 +374,7 @@ export default function BookingModal({ isOpen, onClose, location, selectedDate, 
 
                   <button
                     type="submit"
-                    disabled={loading || !startDate || !endDate}
+                    disabled={loading || !startDate || !endDate || !eventType || !guests}
                     className="w-full px-4 py-3 bg-gold text-bg font-medium rounded text-sm hover:bg-gold-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-[0.2em]"
                   >
                     {loading ? 'Envoi...' : 'Envoyer la demande'}

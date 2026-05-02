@@ -28,7 +28,7 @@ export default function Navbar() {
 
   const links = [
     { href: '/explore', label: t.explore || 'Explore' },
-    { href: '/about', label: t.about || 'About / Team' },
+    { href: '/projects', label: t.projects || 'Projects' },
     { href: '/contact', label: t.contact || 'Contact' },
   ]
 

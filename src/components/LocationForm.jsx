@@ -45,6 +45,33 @@ function isShortMapsLink(input) {
 
 const cities = ['Tunis', 'Sidi Bou Said', 'La Marsa', 'Hammamet', 'Sousse', 'Djerba', 'Tozeur', 'Kairouan', 'Tataouine', 'Matmata', 'Carthage', 'Nabeul']
 
+const REGIONS = [
+  { key: 'gov_tunis',       label: 'Tunis' },
+  { key: 'gov_ariana',      label: 'Ariana' },
+  { key: 'gov_ben_arous',   label: 'Ben Arous' },
+  { key: 'gov_manouba',     label: 'Manouba' },
+  { key: 'gov_nabeul',      label: 'Nabeul' },
+  { key: 'gov_zaghouan',    label: 'Zaghouan' },
+  { key: 'gov_bizerte',     label: 'Bizerte' },
+  { key: 'gov_beja',        label: 'Béja' },
+  { key: 'gov_jendouba',    label: 'Jendouba' },
+  { key: 'gov_le_kef',      label: 'Le Kef' },
+  { key: 'gov_siliana',     label: 'Siliana' },
+  { key: 'gov_kairouan',    label: 'Kairouan' },
+  { key: 'gov_kasserine',   label: 'Kasserine' },
+  { key: 'gov_sidi_bouzid', label: 'Sidi Bouzid' },
+  { key: 'gov_sousse',      label: 'Sousse' },
+  { key: 'gov_monastir',    label: 'Monastir' },
+  { key: 'gov_mahdia',      label: 'Mahdia' },
+  { key: 'gov_sfax',        label: 'Sfax' },
+  { key: 'gov_gabes',       label: 'Gabès' },
+  { key: 'gov_medenine',    label: 'Médenine' },
+  { key: 'gov_tataouine',   label: 'Tataouine' },
+  { key: 'gov_gafsa',       label: 'Gafsa' },
+  { key: 'gov_tozeur',      label: 'Tozeur' },
+  { key: 'gov_kebili',      label: 'Kébili' },
+]
+
 export default function LocationForm({ initialData, onSubmit, onCancel }) {
   const [filterCategories, setFilterCategories] = useState({
     placeTypes: [],
@@ -56,6 +83,7 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
 
   const emptyForm = {
     name: '',
+    region: '',
     city: '',
     type: '',
     description: '',
@@ -79,6 +107,8 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
     place_type_keys: [],
     architecture_style_keys: [],
     decoration_style_keys: [],
+    type_de_demande_keys: [],
+    max_persons_keys: [],
   }
 
   const [form, setForm] = useState(emptyForm)
@@ -105,6 +135,8 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
           architectureStyles: [],
           decorationStyles: [],
           amenities: [],
+          typeDemande: [],
+          maxPersons: [],
         }
 
         data?.forEach(cat => {
@@ -116,6 +148,10 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
             grouped.decorationStyles.push({ key: cat.key, label: cat.label })
           } else if (cat.category_type === 'amenity') {
             grouped.amenities.push({ key: cat.key, label: cat.label })
+          } else if (cat.category_type === 'typedemande') {
+            grouped.typeDemande.push({ key: cat.key, label: cat.label })
+          } else if (cat.category_type === 'maxpersons') {
+            grouped.maxPersons.push({ key: cat.key, label: cat.label })
           }
         })
 
@@ -135,6 +171,7 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
       setForm({
         id: initialData.id || '',
         name: initialData.name || '',
+        region: initialData.region || '',
         city: initialData.city || '',
         type: initialData.type || '',
         description: initialData.description || '',
@@ -162,6 +199,8 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
         place_type_keys: Array.isArray(initialData.place_type_keys) ? initialData.place_type_keys : [],
         architecture_style_keys: Array.isArray(initialData.architecture_style_keys) ? initialData.architecture_style_keys : [],
         decoration_style_keys: Array.isArray(initialData.decoration_style_keys) ? initialData.decoration_style_keys : [],
+        type_de_demande_keys: Array.isArray(initialData.type_de_demande_keys) ? initialData.type_de_demande_keys : [],
+        max_persons_keys: Array.isArray(initialData.max_persons_keys) ? initialData.max_persons_keys : [],
       })
     } else {
       setForm(emptyForm)
@@ -243,6 +282,7 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
 
     const data = {
       name: form.name,
+      region: form.region,
       city: form.city,
       country: 'Tunisia',
       type: form.type,
@@ -268,11 +308,13 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
       place_type_keys: form.place_type_keys && form.place_type_keys.length > 0 ? form.place_type_keys : [],
       architecture_style_keys: form.architecture_style_keys && form.architecture_style_keys.length > 0 ? form.architecture_style_keys : [],
       decoration_style_keys: form.decoration_style_keys && form.decoration_style_keys.length > 0 ? form.decoration_style_keys : [],
+      type_de_demande_keys: form.type_de_demande_keys && form.type_de_demande_keys.length > 0 ? form.type_de_demande_keys : [],
+      max_persons_keys: form.max_persons_keys && form.max_persons_keys.length > 0 ? form.max_persons_keys : [],
     }
 
     console.log('[LocationForm] Submitting payload:', data)
 
-    const optional = ['place_type_keys', 'architecture_style_keys', 'decoration_style_keys', 'google_maps_link']
+    const optional = ['place_type_keys', 'architecture_style_keys', 'decoration_style_keys', 'type_de_demande_keys', 'max_persons_keys', 'google_maps_link']
 
     const attempt = async (payload) => {
       try {
@@ -324,6 +366,14 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
               placeholder="Location name"
             />
             {errors.name && <p className="text-red-400 text-xs mt-0.5">{errors.name}</p>}
+          </div>
+          <div>
+            <label className={labelClass}>Région *</label>
+            <select value={form.region} onChange={(e) => set('region', e.target.value)} className={`${inputClass} ${errors.region ? 'border-red-500' : ''}`}>
+              <option value="">Select region</option>
+              {REGIONS.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
+            </select>
+            {errors.region && <p className="text-red-400 text-xs mt-0.5">{errors.region}</p>}
           </div>
           <div>
             <label className={labelClass}>City *</label>
@@ -487,6 +537,100 @@ export default function LocationForm({ initialData, onSubmit, onCancel }) {
                           <button
                             type="button"
                             onClick={() => set('decoration_style_keys', form.decoration_style_keys.filter(k => k !== key))}
+                            className="hover:opacity-70"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Type de demande */}
+          <div>
+            <label className={labelClass}>Type de demande</label>
+            {categoriesLoading ? (
+              <p className="text-on-surface-variant text-sm">Loading...</p>
+            ) : (
+              <div>
+                {filterCategories.typeDemande.length > 0 ? (
+                  <select
+                    multiple
+                    value={form.type_de_demande_keys}
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.selectedOptions, opt => opt.value)
+                      set('type_de_demande_keys', selected)
+                    }}
+                    className={`${inputClass} min-h-32`}
+                  >
+                    {filterCategories.typeDemande.map(td => (
+                      <option key={td.key} value={td.key}>{td.label}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-on-surface-variant text-sm">No type de demande available</p>
+                )}
+                {form.type_de_demande_keys.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {form.type_de_demande_keys.map(key => {
+                      const label = filterCategories.typeDemande.find(td => td.key === key)?.label
+                      return (
+                        <span key={key} className="inline-flex items-center gap-1 bg-gold/20 text-gold text-xs px-2 py-1 rounded">
+                          {label}
+                          <button
+                            type="button"
+                            onClick={() => set('type_de_demande_keys', form.type_de_demande_keys.filter(k => k !== key))}
+                            className="hover:opacity-70"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Max Persons */}
+          <div>
+            <label className={labelClass}>Nombre de personnes max</label>
+            {categoriesLoading ? (
+              <p className="text-on-surface-variant text-sm">Loading...</p>
+            ) : (
+              <div>
+                {filterCategories.maxPersons.length > 0 ? (
+                  <select
+                    multiple
+                    value={form.max_persons_keys}
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.selectedOptions, opt => opt.value)
+                      set('max_persons_keys', selected)
+                    }}
+                    className={`${inputClass} min-h-32`}
+                  >
+                    {filterCategories.maxPersons.map(mp => (
+                      <option key={mp.key} value={mp.key}>{mp.label}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-on-surface-variant text-sm">No max persons available</p>
+                )}
+                {form.max_persons_keys.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {form.max_persons_keys.map(key => {
+                      const label = filterCategories.maxPersons.find(mp => mp.key === key)?.label
+                      return (
+                        <span key={key} className="inline-flex items-center gap-1 bg-gold/20 text-gold text-xs px-2 py-1 rounded">
+                          {label}
+                          <button
+                            type="button"
+                            onClick={() => set('max_persons_keys', form.max_persons_keys.filter(k => k !== key))}
                             className="hover:opacity-70"
                           >
                             <X className="w-3 h-3" />

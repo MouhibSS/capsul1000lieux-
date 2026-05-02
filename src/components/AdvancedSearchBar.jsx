@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Search, ChevronDown, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLocations } from '../hooks/useLocations'
+import { useFilterOptions } from '../hooks/useFilterOptions'
 
 // ─────────────────────────────────────────────────────────────────
 // Filter data — modeled on 20000lieux.com
@@ -271,6 +272,28 @@ export const BUDGETS_GROUPED = [{ section: 'Budget journalier', options: BUDGETS
 
 const BUDGET_RANGE = Object.fromEntries(BUDGETS.map((o) => [o.key, [o.min, o.max]]))
 
+// ── Type de demande ──────────────────────────────────────────────
+export const TYPE_DE_DEMANDE = [
+  { key: 'type_demande_photo',      label: 'Photographie / Vidéo' },
+  { key: 'type_demande_cinema',     label: 'Cinéma / Production' },
+  { key: 'type_demande_publicite',  label: 'Publicité' },
+  { key: 'type_demande_evenement',  label: 'Événement' },
+  { key: 'type_demande_vente',      label: 'Vente / Immobilier' },
+  { key: 'type_demande_autre',      label: 'Autre' },
+]
+export const TYPE_DE_DEMANDE_GROUPED = [{ section: 'Type de demande', options: TYPE_DE_DEMANDE }]
+
+// ── Nombre de personnes max ─────────────────────────────────────
+export const MAX_PERSONS = [
+  { key: 'max_persons_5',      label: '5 personnes' },
+  { key: 'max_persons_10',     label: '10 personnes' },
+  { key: 'max_persons_20',     label: '20 personnes' },
+  { key: 'max_persons_50',     label: '50 personnes' },
+  { key: 'max_persons_50_100', label: 'Entre 50 et 100' },
+  { key: 'max_persons_100',    label: '> 100 personnes' },
+]
+export const MAX_PERSONS_GROUPED = [{ section: 'Nombre de personnes', options: MAX_PERSONS }]
+
 export function buildCitySections(governorates) {
   const govs = governorates.length === 0 ? Object.keys(CITIES_BY_GOVERNORATE) : governorates
   return govs
@@ -321,6 +344,22 @@ export function applyFilters(locations, f) {
     const [min, max] = BUDGET_RANGE[b] || [0, 999999]
     return l.price >= min && l.price < max
   }))
+
+  // Filter by type de demande
+  if (f.typeDemande?.length) {
+    result = result.filter((l) => {
+      const typeDemandKeys = l.type_de_demande_keys || []
+      return f.typeDemande.some(t => typeDemandKeys.includes(t))
+    })
+  }
+
+  // Filter by max persons
+  if (f.maxPersons?.length) {
+    result = result.filter((l) => {
+      const maxPersonsKeys = l.max_persons_keys || []
+      return f.maxPersons.some(mp => maxPersonsKeys.includes(mp))
+    })
+  }
 
   // Keyword filtering — search in name, city, description, and tags
   if (f.keyword && f.keyword.trim()) {
@@ -378,16 +417,16 @@ function FilterPill({ label, count, isOpen, onClick }) {
 // ─────────────────────────────────────────────────────────────────
 
 const COL_CLASSES = {
-  2: 'grid-cols-1 sm:grid-cols-2',
-  3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
-  4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
+  2: 'sm:columns-2',
+  3: 'sm:columns-2 lg:columns-3',
+  4: 'sm:columns-2 lg:columns-4',
 }
 
 function CheckboxGrid({ sections, selected, onToggle, getKey, getLabel, columns = 4 }) {
   return (
-    <div className={`grid ${COL_CLASSES[columns] || COL_CLASSES[4]} gap-x-6 gap-y-1`}>
+    <div className={`columns-1 ${COL_CLASSES[columns] || COL_CLASSES[4]} gap-x-6`}>
       {sections.map((sec) => (
-        <div key={sec.section} className="break-inside-avoid mb-4">
+        <div key={sec.sectionKey || sec.section} className="break-inside-avoid mb-4">
           <div className="text-on-surface font-semibold text-[13px] tracking-wide mb-2 pb-1 border-b border-outline-variant/20">{sec.section}</div>
           <div className="space-y-0.5">
             {sec.options.map((opt) => {
@@ -483,18 +522,21 @@ export default function AdvancedSearchBar({
 }) {
   const navigate = useNavigate()
   const { locations } = useLocations()
+  const { filters: dynamicFilters, sectioned: dynamicSections, loading: filtersLoading } = useFilterOptions()
   const containerRef = useRef(null)
 
   // Controlled vs internal state
   const isControlled = mode === 'controlled' && value && onChange
   const [internal, setInternal] = useState({
-    governorates:  initial.governorates  || [],
-    cities:        initial.cities        || [],
-    types:         initial.types         || [],
-    architectures: initial.architectures || [],
-    decorations:   initial.decorations   || [],
-    budgets:       initial.budgets       || [],
-    keyword:       initial.keyword       || '',
+    governorates:      initial.governorates      || [],
+    cities:            initial.cities            || [],
+    types:             initial.types             || [],
+    architectures:     initial.architectures     || [],
+    decorations:       initial.decorations       || [],
+    budgets:           initial.budgets           || [],
+    typeDemande:       initial.typeDemande       || [],
+    maxPersons:        initial.maxPersons        || [],
+    keyword:           initial.keyword           || '',
   })
   const state = isControlled ? value : internal
   const setField = (field) => (next) => {
@@ -508,7 +550,7 @@ export default function AdvancedSearchBar({
     setField(field)(next)
   }
   const clearAll = () => {
-    const empty = { governorates: [], cities: [], types: [], architectures: [], decorations: [], budgets: [], keyword: '' }
+    const empty = { governorates: [], cities: [], types: [], architectures: [], decorations: [], budgets: [], typeDemande: [], maxPersons: [], keyword: '' }
     if (isControlled) onChange(empty)
     else setInternal(empty)
   }
@@ -516,6 +558,7 @@ export default function AdvancedSearchBar({
   const totalActive =
     state.governorates.length + state.cities.length + state.types.length +
     state.architectures.length + state.decorations.length + state.budgets.length +
+    state.typeDemande.length + state.maxPersons.length +
     (state.keyword ? 1 : 0)
 
   // Live count
@@ -538,13 +581,69 @@ export default function AdvancedSearchBar({
 
   const citySections = useMemo(() => buildCitySections(state.governorates), [state.governorates])
 
+  const TYPE_DE_DEMANDE_GROUPED = useMemo(() =>
+    dynamicSections.typedemande?.length > 0
+      ? dynamicSections.typedemande
+      : (dynamicFilters.typeDemande.length > 0
+          ? [{ section: 'Type de demande', options: dynamicFilters.typeDemande }]
+          : []),
+    [dynamicSections.typedemande, dynamicFilters.typeDemande]
+  )
+
+  const MAX_PERSONS_GROUPED = useMemo(() =>
+    dynamicSections.maxpersons?.length > 0
+      ? dynamicSections.maxpersons
+      : (dynamicFilters.maxPersons.length > 0
+          ? [{ section: 'Nombre de personnes', options: dynamicFilters.maxPersons }]
+          : []),
+    [dynamicSections.maxpersons, dynamicFilters.maxPersons]
+  )
+
+  // Merge admin-managed Supabase rows over the hardcoded base lists.
+  // Hardcoded keys remain for back-compat with existing locations; new admin
+  // parents/children are appended into matching sections, or surface as a
+  // dedicated "Personnalisé" section so they appear immediately.
+  const mergeSections = (baseSections, dbSections) => {
+    if (!dbSections || dbSections.length === 0) return baseSections
+    const baseByKey = new Map(baseSections.map(s => [s.section, { ...s, options: [...s.options] }]))
+    const baseLabels = new Set(baseSections.flatMap(s => s.options.map(o => o.label.toLowerCase())))
+    const baseSection = (sec) => baseByKey.get(sec.section)
+
+    for (const sec of dbSections) {
+      const match = baseSection(sec)
+      const newOpts = sec.options.filter(o => !baseLabels.has(o.label.toLowerCase()))
+      if (newOpts.length === 0) continue
+      if (match) {
+        match.options.push(...newOpts)
+      } else {
+        baseByKey.set(sec.section, { section: sec.section, sectionKey: sec.sectionKey, options: newOpts })
+      }
+    }
+    return Array.from(baseByKey.values())
+  }
+
+  const PLACE_TYPES_MERGED = useMemo(
+    () => mergeSections(PLACE_TYPES_GROUPED, dynamicSections.placeType),
+    [dynamicSections.placeType]
+  )
+  const ARCHITECTURES_MERGED = useMemo(
+    () => mergeSections(ARCHITECTURES_GROUPED, dynamicSections.architectureStyle),
+    [dynamicSections.architectureStyle]
+  )
+  const DECORATIONS_MERGED = useMemo(
+    () => mergeSections(DECORATIONS_GROUPED, dynamicSections.decorationStyle),
+    [dynamicSections.decorationStyle]
+  )
+
   const filters = [
-    { id: 'gouvernorat', label: 'Gouvernorat',  sections: GOVERNORATES_GROUPED, selected: state.governorates,  onToggle: toggleField('governorates'),  onClear: () => setField('governorates')([]),  getKey: (o) => o.key, getLabel: (o) => o.label, columns: 3 },
+    { id: 'region', label: 'Région',  sections: GOVERNORATES_GROUPED, selected: state.governorates,  onToggle: toggleField('governorates'),  onClear: () => setField('governorates')([]),  getKey: (o) => o.key, getLabel: (o) => o.label, columns: 3 },
     { id: 'ville',       label: 'Ville',         sections: citySections,         selected: state.cities,        onToggle: toggleField('cities'),        onClear: () => setField('cities')([]),        getKey: (o) => o,     getLabel: (o) => o,     columns: 4 },
-    { id: 'type',        label: 'Type de lieu',  sections: PLACE_TYPES_GROUPED,  selected: state.types,         onToggle: toggleField('types'),         onClear: () => setField('types')([]),         getKey: (o) => o.key, getLabel: (o) => o.label, columns: 4 },
-    { id: 'architecture',label: 'Architecture',  sections: ARCHITECTURES_GROUPED,selected: state.architectures, onToggle: toggleField('architectures'), onClear: () => setField('architectures')([]), getKey: (o) => o.key, getLabel: (o) => o.label, columns: 4 },
-    { id: 'decoration',  label: 'Décoration',    sections: DECORATIONS_GROUPED,  selected: state.decorations,   onToggle: toggleField('decorations'),   onClear: () => setField('decorations')([]),   getKey: (o) => o.key, getLabel: (o) => o.label, columns: 4 },
+    { id: 'type',        label: 'Type de lieu',  sections: PLACE_TYPES_MERGED,   selected: state.types,         onToggle: toggleField('types'),         onClear: () => setField('types')([]),         getKey: (o) => o.key, getLabel: (o) => o.label, columns: 4 },
+    { id: 'architecture',label: 'Architecture',  sections: ARCHITECTURES_MERGED, selected: state.architectures, onToggle: toggleField('architectures'), onClear: () => setField('architectures')([]), getKey: (o) => o.key, getLabel: (o) => o.label, columns: 4 },
+    { id: 'decoration',  label: 'Décoration',    sections: DECORATIONS_MERGED,   selected: state.decorations,   onToggle: toggleField('decorations'),   onClear: () => setField('decorations')([]),   getKey: (o) => o.key, getLabel: (o) => o.label, columns: 4 },
     { id: 'budget',      label: 'Budget',        sections: BUDGETS_GROUPED,      selected: state.budgets,       onToggle: toggleField('budgets'),       onClear: () => setField('budgets')([]),       getKey: (o) => o.key, getLabel: (o) => o.label, columns: 2 },
+    { id: 'typedemande', label: 'Type demande',  sections: TYPE_DE_DEMANDE_GROUPED, selected: state.typeDemande, onToggle: toggleField('typeDemande'), onClear: () => setField('typeDemande')([]), getKey: (o) => o.key, getLabel: (o) => o.label, columns: 2 },
+    { id: 'maxpersons',  label: 'Nombre de personnes',  sections: MAX_PERSONS_GROUPED,  selected: state.maxPersons,    onToggle: toggleField('maxPersons'),    onClear: () => setField('maxPersons')([]),    getKey: (o) => o.key, getLabel: (o) => o.label, columns: 2 },
   ]
 
   const openFilter = filters.find((f) => f.id === openId)
@@ -553,13 +652,15 @@ export default function AdvancedSearchBar({
     closePanel()
     if (mode === 'navigate') {
       const params = new URLSearchParams()
-      if (state.governorates.length)  params.set('governorate',  state.governorates.join(','))
-      if (state.cities.length)        params.set('city',         state.cities.join(','))
-      if (state.types.length)         params.set('type',         state.types.join(','))
-      if (state.architectures.length) params.set('architecture', state.architectures.join(','))
-      if (state.decorations.length)   params.set('decoration',   state.decorations.join(','))
-      if (state.budgets.length)       params.set('budget',       state.budgets.join(','))
-      if (state.keyword)              params.set('q',            state.keyword)
+      if (state.governorates.length)  params.set('governorate',   state.governorates.join(','))
+      if (state.cities.length)        params.set('city',          state.cities.join(','))
+      if (state.types.length)         params.set('type',          state.types.join(','))
+      if (state.architectures.length) params.set('architecture',  state.architectures.join(','))
+      if (state.decorations.length)   params.set('decoration',    state.decorations.join(','))
+      if (state.budgets.length)       params.set('budget',        state.budgets.join(','))
+      if (state.typeDemande.length)   params.set('typedemande',   state.typeDemande.join(','))
+      if (state.maxPersons.length)    params.set('maxpersons',    state.maxPersons.join(','))
+      if (state.keyword)              params.set('q',             state.keyword)
       navigate(`/explore?${params.toString()}`)
     }
   }

@@ -3,6 +3,15 @@ import { motion } from 'framer-motion'
 import { Plus, Trash2, ChevronDown, Grid3X3, LayoutList, Edit2 } from 'lucide-react'
 import { useFilterCategories } from '../hooks/useFilterCategories'
 
+const CATEGORY_TYPES = [
+  { value: 'placeType', label: 'Place Type', accent: 'text-gold' },
+  { value: 'architectureStyle', label: 'Architecture', accent: 'text-purple-400' },
+  { value: 'decorationStyle', label: 'Decoration', accent: 'text-pink-400' },
+  { value: 'amenity', label: 'Amenities', accent: 'text-emerald-400' },
+  { value: 'typedemande', label: 'Type de Demande', accent: 'text-blue-400' },
+  { value: 'maxpersons', label: 'Max Persons', accent: 'text-amber-400' },
+]
+
 export default function AdminFilters() {
   const { categories, loading, addCategory, updateCategory, deleteCategory } = useFilterCategories()
   const [expandedCategories, setExpandedCategories] = useState(new Set())
@@ -28,17 +37,19 @@ export default function AdminFilters() {
         })
         setEditingId(null)
       } else {
+        // No parent set => the new filter itself becomes a parent (parent_key = null)
         await addCategory(
           formData.key,
           formData.label,
           formData.categoryType,
-          formData.parentKey
+          formData.parentKey || null
         )
       }
       setFormData({ key: '', label: '', categoryType: 'placeType', parentKey: null })
       setShowAddForm(false)
     } catch (err) {
       console.error('Failed to save category:', err)
+      alert(`Failed to save: ${err.message || err}`)
     }
   }
 
@@ -65,12 +76,10 @@ export default function AdminFilters() {
         await deleteCategory(id)
       } catch (err) {
         console.error('Failed to delete category:', err)
+        alert(`Failed to delete: ${err.message || err}`)
       }
     }
   }
-
-  const placeTypeCategories = categories.filter(c => c.category_type === 'placeType' && !c.parent_key)
-  const architectureCategories = categories.filter(c => c.category_type === 'architecture' && !c.parent_key)
 
   const getChildren = (parentKey) => categories.filter(c => c.parent_key === parentKey)
 
@@ -91,7 +100,7 @@ export default function AdminFilters() {
               className="flex items-center gap-1 px-3 py-2 bg-surface-low/30 hover:bg-surface-low/50 rounded text-sm transition-colors cursor-pointer"
               onClick={() => children.length > 0 && toggleExpand(cat.id)}
             >
-              {children.length > 0 && (
+              {children.length > 0 ? (
                 <motion.div
                   animate={{ rotate: isExpanded ? 90 : 0 }}
                   transition={{ duration: 0.2 }}
@@ -99,10 +108,12 @@ export default function AdminFilters() {
                 >
                   <ChevronDown className="w-3 h-3 text-on-surface-variant" strokeWidth={2} />
                 </motion.div>
+              ) : (
+                <span className="w-3 h-3 flex-shrink-0" />
               )}
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-on-surface text-xs truncate">{cat.label}</p>
-                <p className="text-xs text-on-surface-variant">{cat.key}</p>
+                <p className="text-[10px] text-on-surface-variant">{cat.key}</p>
               </div>
               <button
                 onClick={(e) => { e.stopPropagation(); handleStartEdit(cat) }}
@@ -183,7 +194,7 @@ export default function AdminFilters() {
                 value={formData.key}
                 onChange={(e) => setFormData({ ...formData, key: e.target.value })}
                 className="px-3 py-1.5 text-sm bg-surface-low border border-outline-variant/40 rounded text-on-surface outline-none focus:border-gold transition-colors"
-                placeholder="Key"
+                placeholder="Key (e.g. modern_villa)"
                 disabled={editingId}
               />
               <input
@@ -191,33 +202,39 @@ export default function AdminFilters() {
                 value={formData.label}
                 onChange={(e) => setFormData({ ...formData, label: e.target.value })}
                 className="px-3 py-1.5 text-sm bg-surface-low border border-outline-variant/40 rounded text-on-surface outline-none focus:border-gold transition-colors"
-                placeholder="Label"
+                placeholder="Label (e.g. Modern Villa)"
               />
             </div>
             {!editingId && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <select
                   value={formData.categoryType}
-                  onChange={(e) => setFormData({ ...formData, categoryType: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, categoryType: e.target.value, parentKey: null })}
                   className="px-3 py-1.5 text-sm bg-surface-low border border-outline-variant/40 rounded text-on-surface outline-none focus:border-gold transition-colors"
                 >
-                  <option value="placeType">Place Type</option>
-                  <option value="architecture">Architecture</option>
+                  {CATEGORY_TYPES.map(t => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
                 </select>
                 <select
                   value={formData.parentKey || ''}
                   onChange={(e) => setFormData({ ...formData, parentKey: e.target.value || null })}
                   className="px-3 py-1.5 text-sm bg-surface-low border border-outline-variant/40 rounded text-on-surface outline-none focus:border-gold transition-colors"
                 >
-                  <option value="">Parent (optional)</option>
+                  <option value="">No parent — make this a parent</option>
                   {categories
                     .filter(c => c.category_type === formData.categoryType && !c.parent_key)
                     .map(c => (
-                      <option key={c.id} value={c.key}>{c.label}</option>
+                      <option key={c.id} value={c.key}>↳ child of {c.label}</option>
                     ))
                   }
                 </select>
               </div>
+            )}
+            {!editingId && !formData.parentKey && (
+              <p className="text-[10px] text-gold/70 italic">
+                ✦ No parent selected — this filter will become a top-level parent in <span className="font-medium">{CATEGORY_TYPES.find(t => t.value === formData.categoryType)?.label}</span>.
+              </p>
             )}
             <div className="flex gap-2">
               <button
@@ -238,45 +255,35 @@ export default function AdminFilters() {
         </motion.div>
       )}
 
-      {/* Content */}
+      {/* Content — one section per category type */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div>
-          <h3 className="text-xs font-medium text-on-surface-variant uppercase mb-2">Place Type</h3>
-          <div className="border border-outline-variant/25 rounded-lg p-3">
-            {placeTypeCategories.length > 0 ? (
-              renderCategoryTree(placeTypeCategories)
-            ) : (
-              <p className="text-xs text-on-surface-variant">No categories</p>
-            )}
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-xs font-medium text-on-surface-variant uppercase mb-2">Architecture</h3>
-          <div className="border border-outline-variant/25 rounded-lg p-3">
-            {architectureCategories.length > 0 ? (
-              renderCategoryTree(architectureCategories)
-            ) : (
-              <p className="text-xs text-on-surface-variant">No categories</p>
-            )}
-          </div>
-        </div>
+        {CATEGORY_TYPES.map(type => {
+          const parents = categories.filter(c => c.category_type === type.value && !c.parent_key)
+          return (
+            <div key={type.value}>
+              <h3 className={`text-xs font-medium uppercase mb-2 ${type.accent}`}>{type.label}</h3>
+              <div className="border border-outline-variant/25 rounded-lg p-3 min-h-[60px]">
+                {parents.length > 0 ? (
+                  renderCategoryTree(parents)
+                ) : (
+                  <p className="text-xs text-on-surface-variant">No categories</p>
+                )}
+              </div>
+            </div>
+          )
+        })}
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="bg-surface-low rounded-lg p-3 border border-outline-variant/25">
-          <p className="text-on-surface-variant text-xs font-medium mb-1">Place Type</p>
-          <p className="font-display text-2xl font-light text-gold">
-            {categories.filter(c => c.category_type === 'placeType').length}
-          </p>
-        </div>
-        <div className="bg-surface-low rounded-lg p-3 border border-outline-variant/25">
-          <p className="text-on-surface-variant text-xs font-medium mb-1">Architecture</p>
-          <p className="font-display text-2xl font-light text-purple-400">
-            {categories.filter(c => c.category_type === 'architecture').length}
-          </p>
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+        {CATEGORY_TYPES.map(type => (
+          <div key={type.value} className="bg-surface-low rounded-lg p-3 border border-outline-variant/25">
+            <p className="text-on-surface-variant text-[10px] font-medium mb-1 uppercase tracking-wider">{type.label}</p>
+            <p className={`font-display text-2xl font-light ${type.accent}`}>
+              {categories.filter(c => c.category_type === type.value).length}
+            </p>
+          </div>
+        ))}
       </div>
     </div>
   )

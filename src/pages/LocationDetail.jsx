@@ -5,7 +5,7 @@ import {
   ArrowLeft, Heart, Star, MapPin, Maximize2, Users, Check,
   ChevronLeft, ChevronRight, Calendar, Share2, ArrowUpRight, X,
   Zap, Home, Bath, Car, Image as ImageIcon, DoorOpen, FileText,
-  CalendarDays, Sun, Sunset,
+  CalendarDays, Sun, Sunset, Building2, Palette, Sparkles, Camera,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuthContext } from '../context/AuthContext'
@@ -13,6 +13,8 @@ import { useFavoritesContext as useFavorites } from '../context/FavoritesContext
 import { useProfile } from '../hooks/useProfile'
 import { useLanguage, useTranslation } from '../context/LanguageContext'
 import { useLocationPieces } from '../hooks/useLocationPieces'
+import { useAmenities } from '../hooks/useAmenities'
+import { useFilterOptions } from '../hooks/useFilterOptions'
 import LocationCard from '../components/LocationCard'
 import LocationMap from '../components/LocationMap'
 import ProfileCompletionModal from '../components/ProfileCompletionModal'
@@ -110,13 +112,22 @@ export default function LocationDetail() {
   const { isProfileComplete } = useProfile()
   const { lang } = useLanguage()
   const { fetchPieces } = useLocationPieces()
+  const { getLabel: getAmenityLabel } = useAmenities()
+  const { getLabel: getFilterLabel } = useFilterOptions()
   const [location, setLocation] = useState(null)
   const [similar, setSimilar] = useState([])
   const [pieces, setPieces] = useState([])
   const [loading, setLoading] = useState(true)
   const [imgIndex, setImgIndex] = useState(0)
+  const [imgDir, setImgDir] = useState(1) // 1 = next (slide from right), -1 = prev
   const [fullscreenOpen, setFullscreenOpen] = useState(false)
   const [touchStart, setTouchStart] = useState(null)
+
+  const stepImage = (delta) => {
+    if (allGalleryImages.length === 0) return
+    setImgDir(delta > 0 ? 1 : -1)
+    setImgIndex((i) => (i + delta + allGalleryImages.length) % allGalleryImages.length)
+  }
   const [bookingDate, setBookingDate] = useState('')
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [bookingModalOpen, setBookingModalOpen] = useState(false)
@@ -129,8 +140,8 @@ export default function LocationDetail() {
   const handleTouchEnd = (e) => {
     if (touchStart === null || allGalleryImages.length === 0) return
     const distance = touchStart - e.changedTouches[0].clientX
-    if (distance > 50) setImgIndex((i) => (i + 1) % allGalleryImages.length)
-    if (distance < -50) setImgIndex((i) => (i - 1 + allGalleryImages.length) % allGalleryImages.length)
+    if (distance > 50) stepImage(1)
+    if (distance < -50) stepImage(-1)
   }
 
   const handleBookNow = () => setBookingModalOpen(true)
@@ -309,6 +320,8 @@ export default function LocationDetail() {
           <span className="w-1 h-1 rounded-full bg-outline-variant" />
           <span>{location.type}</span>
           <span className="w-1 h-1 rounded-full bg-outline-variant" />
+          <span>{location.region || location.city}</span>
+          <span className="w-1 h-1 rounded-full bg-outline-variant" />
           <span>{location.city}</span>
           <span className="w-1 h-1 rounded-full bg-outline-variant" />
           <span className="text-gold">#{String(location.id).padStart(4, '0')}</span>
@@ -349,16 +362,6 @@ export default function LocationDetail() {
                 <MapPin className="w-3.5 h-3.5 text-gold" strokeWidth={1.5} />
                 {location.city}, {location.country}
               </span>
-              <span className="w-1 h-1 rounded-full bg-outline-variant" />
-              <span className="font-mono eyebrow-sm">
-                {location.coordinates.lat?.toFixed(4)}°N · {location.coordinates.lng?.toFixed(4)}°E
-              </span>
-              <span className="w-1 h-1 rounded-full bg-outline-variant" />
-              <span className="flex items-center gap-2">
-                <Star className="w-3.5 h-3.5 text-gold" fill="currentColor" />
-                <span className="text-on-surface">{location.rating}</span>
-                <span>({location.reviews} reviews)</span>
-              </span>
             </motion.div>
           </div>
 
@@ -395,15 +398,24 @@ export default function LocationDetail() {
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
             >
-              <motion.img
-                key={imgIndex}
-                src={allGalleryImages[imgIndex].url}
-                alt={location.name}
-                initial={{ opacity: 0, scale: 1.04 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.8, ease }}
-                className="absolute inset-0 w-full h-full object-cover"
-              />
+              <AnimatePresence initial={false} custom={imgDir} mode="popLayout">
+                <motion.img
+                  key={imgIndex}
+                  custom={imgDir}
+                  src={allGalleryImages[imgIndex].url}
+                  alt={location.name}
+                  variants={{
+                    enter: (dir) => ({ x: dir > 0 ? '100%' : '-100%', opacity: 0.6 }),
+                    center: { x: '0%', opacity: 1 },
+                    exit:  (dir) => ({ x: dir > 0 ? '-100%' : '100%', opacity: 0.6 }),
+                  }}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ x: { duration: 0.7, ease }, opacity: { duration: 0.4, ease } }}
+                  className="absolute inset-0 w-full h-full object-cover will-change-transform"
+                />
+              </AnimatePresence>
               <div className="absolute inset-0 bg-gradient-to-t from-bg/40 via-transparent to-transparent pointer-events-none" />
               <button
                 onClick={(e) => { e.stopPropagation(); setFullscreenOpen(true) }}
@@ -415,15 +427,15 @@ export default function LocationDetail() {
               {allGalleryImages.length > 1 && (
                 <>
                   <button
-                    onClick={(e) => { e.stopPropagation(); setImgIndex((i) => (i - 1 + allGalleryImages.length) % allGalleryImages.length) }}
-                    className="absolute left-5 top-1/2 -translate-y-1/2 w-12 h-12 glass flex items-center justify-center text-on-surface hover:text-gold transition-colors"
+                    onClick={(e) => { e.stopPropagation(); stepImage(-1) }}
+                    className="absolute left-5 top-1/2 -translate-y-1/2 w-12 h-12 glass flex items-center justify-center text-on-surface hover:text-gold transition-colors z-10"
                     aria-label="Previous image"
                   >
                     <ChevronLeft className="w-5 h-5" strokeWidth={1.5} />
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); setImgIndex((i) => (i + 1) % allGalleryImages.length) }}
-                    className="absolute right-5 top-1/2 -translate-y-1/2 w-12 h-12 glass flex items-center justify-center text-on-surface hover:text-gold transition-colors"
+                    onClick={(e) => { e.stopPropagation(); stepImage(1) }}
+                    className="absolute right-5 top-1/2 -translate-y-1/2 w-12 h-12 glass flex items-center justify-center text-on-surface hover:text-gold transition-colors z-10"
                     aria-label="Next image"
                   >
                     <ChevronRight className="w-5 h-5" strokeWidth={1.5} />
@@ -442,17 +454,37 @@ export default function LocationDetail() {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-1 md:grid-rows-2 gap-3 md:gap-4">
-              {allGalleryImages.slice(1, 3).map((img, i) => (
-                <button
-                  key={i}
-                  onClick={() => setImgIndex(i + 1)}
-                  className="relative overflow-hidden group bg-surface-low h-40 md:h-auto cursor-pointer"
-                  style={{ backgroundColor: location.fallback || '#1c1b1b' }}
-                >
-                  <img src={img.url} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                  <div className="absolute inset-0 bg-bg/20 group-hover:bg-bg/0 transition-colors" />
-                </button>
-              ))}
+              {[1, 2].map((offset) => {
+                const targetIdx = (imgIndex + offset) % allGalleryImages.length
+                const img = allGalleryImages[targetIdx]
+                if (!img) return null
+                return (
+                  <button
+                    key={offset}
+                    onClick={() => { setImgDir(1); setImgIndex(targetIdx) }}
+                    className="relative overflow-hidden group bg-surface-low h-40 md:h-auto cursor-pointer"
+                    style={{ backgroundColor: location.fallback || '#1c1b1b' }}
+                  >
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      <motion.img
+                        key={targetIdx}
+                        src={img.url}
+                        alt=""
+                        loading="lazy"
+                        initial={{ x: '100%', opacity: 0.6 }}
+                        animate={{ x: '0%', opacity: 1 }}
+                        exit={{ x: '-100%', opacity: 0.6 }}
+                        transition={{ duration: 0.6, ease }}
+                        className="absolute inset-0 w-full h-full object-cover will-change-transform"
+                      />
+                    </AnimatePresence>
+                    <div className="absolute inset-0 bg-bg/20 group-hover:bg-bg/0 transition-colors pointer-events-none" />
+                    <div className="absolute bottom-2 left-2 font-mono text-[9px] tracking-[0.25em] uppercase text-on-surface/85 bg-bg/50 backdrop-blur px-2 py-1 pointer-events-none">
+                      {String(targetIdx + 1).padStart(2, '0')}
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           </div>
         )}
@@ -470,21 +502,32 @@ export default function LocationDetail() {
             <button onClick={() => setFullscreenOpen(false)} className="absolute top-4 md:top-6 right-4 md:right-6 p-2 text-white hover:text-gold transition-colors z-10" aria-label="Close fullscreen">
               <X className="w-6 h-6 md:w-8 md:h-8" strokeWidth={1.5} />
             </button>
-            <motion.img
-              key={`fullscreen-${imgIndex}`}
-              src={allGalleryImages[imgIndex].url}
-              alt={location.name}
-              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.3 }}
-              className="w-full h-full object-contain"
-              onClick={(e) => e.stopPropagation()}
-            />
+            <div className="absolute inset-0 overflow-hidden flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+              <AnimatePresence initial={false} custom={imgDir} mode="popLayout">
+                <motion.img
+                  key={`fullscreen-${imgIndex}`}
+                  custom={imgDir}
+                  src={allGalleryImages[imgIndex].url}
+                  alt={location.name}
+                  variants={{
+                    enter: (dir) => ({ x: dir > 0 ? '100%' : '-100%', opacity: 0.6 }),
+                    center: { x: '0%', opacity: 1 },
+                    exit:  (dir) => ({ x: dir > 0 ? '-100%' : '100%', opacity: 0.6 }),
+                  }}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ x: { duration: 0.7, ease }, opacity: { duration: 0.4, ease } }}
+                  className="absolute inset-0 w-full h-full object-contain will-change-transform"
+                />
+              </AnimatePresence>
+            </div>
             {allGalleryImages.length > 1 && (
               <>
-                <button onClick={(e) => { e.stopPropagation(); setImgIndex((i) => (i - 1 + allGalleryImages.length) % allGalleryImages.length) }} className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 p-2 md:p-3 text-white hover:text-gold transition-colors" aria-label="Previous image">
+                <button onClick={(e) => { e.stopPropagation(); stepImage(-1) }} className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 p-2 md:p-3 text-white hover:text-gold transition-colors" aria-label="Previous image">
                   <ChevronLeft className="w-6 h-6 md:w-8 md:h-8" strokeWidth={1.5} />
                 </button>
-                <button onClick={(e) => { e.stopPropagation(); setImgIndex((i) => (i + 1) % allGalleryImages.length) }} className="absolute right-4 md:right-6 top-1/2 -translate-y-1/2 p-2 md:p-3 text-white hover:text-gold transition-colors" aria-label="Next image">
+                <button onClick={(e) => { e.stopPropagation(); stepImage(1) }} className="absolute right-4 md:right-6 top-1/2 -translate-y-1/2 p-2 md:p-3 text-white hover:text-gold transition-colors" aria-label="Next image">
                   <ChevronRight className="w-6 h-6 md:w-8 md:h-8" strokeWidth={1.5} />
                 </button>
               </>
@@ -552,22 +595,67 @@ export default function LocationDetail() {
                   </section>
 
                   <section>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-outline-variant/25 border border-outline-variant/25">
-                      {[
-                        { label: 'Surface',  value: `${location.area} m²`,    icon: Maximize2 },
-                        { label: 'Capacity', value: `${location.capacity} pax`, icon: Users },
-                        { label: 'Type',     value: location.type,             icon: Home },
-                        { label: 'Rating',   value: `${location.rating} ★`,    icon: Star },
-                      ].map((m) => (
-                        <div key={m.label} className="bg-bg p-5 md:p-6 flex flex-col gap-3 md:gap-4">
-                          <m.icon className="w-4 h-4 text-gold" strokeWidth={1.5} />
-                          <div>
-                            <div className="font-display text-2xl md:text-4xl font-light text-on-surface tabular-nums">{m.value}</div>
-                            <div className="eyebrow-sm text-on-surface-variant mt-1">{m.label}</div>
-                          </div>
+                    {(() => {
+                      const boxes = []
+                      if (location.area) {
+                        boxes.push({ icon: Maximize2, label: 'Surface', value: `${location.area} m²` })
+                      }
+                      if (location.place_type_keys?.length > 0) {
+                        boxes.push({ icon: Home, label: 'Type de lieu', tags: location.place_type_keys })
+                      }
+                      if (location.architecture_style_keys?.length > 0) {
+                        boxes.push({ icon: Building2, label: 'Architecture', tags: location.architecture_style_keys })
+                      }
+                      if (location.decoration_style_keys?.length > 0) {
+                        boxes.push({ icon: Palette, label: 'Décoration', tags: location.decoration_style_keys })
+                      }
+                      if (location.max_persons_keys?.length > 0) {
+                        boxes.push({ icon: Users, label: 'Nb personnes max', tags: location.max_persons_keys })
+                      }
+                      if (location.type_de_demande_keys?.length > 0) {
+                        boxes.push({ icon: Camera, label: 'Type de demande', tags: location.type_de_demande_keys })
+                      }
+                      if (boxes.length === 0) return null
+                      const cols = boxes.length <= 2 ? boxes.length
+                        : boxes.length === 3 ? 3
+                        : boxes.length === 4 ? 4
+                        : boxes.length <= 6 ? 3
+                        : 4
+                      const gridCls = {
+                        1: 'grid-cols-1',
+                        2: 'grid-cols-1 sm:grid-cols-2',
+                        3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+                        4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
+                      }[cols]
+                      return (
+                        <div className={`grid ${gridCls} gap-px bg-outline-variant/25 border border-outline-variant/25`}>
+                          {boxes.map((b) => (
+                            <div key={b.label} className="bg-bg p-5 md:p-6 flex flex-col gap-4 min-h-[180px]">
+                              <b.icon className="w-4 h-4 text-gold" strokeWidth={1.5} />
+                              <div className="flex-1 flex flex-col justify-between gap-3">
+                                {b.value ? (
+                                  <div className="font-display text-2xl md:text-4xl font-light text-on-surface tabular-nums leading-tight">
+                                    {b.value}
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {b.tags.map((t) => (
+                                      <span
+                                        key={t}
+                                        className="inline-flex items-center text-[11px] px-2.5 py-1 bg-gold/8 border border-gold/30 rounded text-on-surface font-light tracking-wide"
+                                      >
+                                        {getFilterLabel(t)}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                                <div className="eyebrow-sm text-on-surface-variant">{b.label}</div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      )
+                    })()}
                   </section>
 
                   <section>
@@ -595,7 +683,7 @@ export default function LocationDetail() {
                         {location.amenities.map((a) => (
                           <div key={a} className="flex items-center gap-3 py-3 border-b border-outline-variant/20">
                             <Check className="w-3.5 h-3.5 text-gold shrink-0" strokeWidth={1.5} />
-                            <span className="text-on-surface text-sm font-light">{a}</span>
+                            <span className="text-on-surface text-sm font-light">{getAmenityLabel(a)}</span>
                           </div>
                         ))}
                       </div>

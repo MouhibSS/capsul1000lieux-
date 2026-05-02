@@ -17,7 +17,7 @@ import Home from './pages/Home'
 import Explore from './pages/Explore'
 import LocationDetail from './pages/LocationDetail'
 import ListSpace from './pages/ListSpace'
-import About from './pages/About'
+import Projects from './pages/Projects'
 import Contact from './pages/Contact'
 import Dashboard from './pages/Dashboard'
 import Unauthorized from './pages/Unauthorized'
@@ -41,7 +41,8 @@ function AnimatedRoutes() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/login" element={<Login />} />
         <Route path="/list-space" element={<ListSpace />} />
-        <Route path="/about" element={<About />} />
+        <Route path="/projects" element={<Projects />} />
+        <Route path="/about" element={<Projects />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
