@@ -219,31 +219,13 @@ function GridTile({ project, onOpen, onHover, hovered, anyHovered, index, isTouc
     onHover(null)
   }
 
-  // Touch: IntersectionObserver picks the most visible tile to play
-  useEffect(() => {
-    if (!isTouch) return
-    const el = tileRef.current
-    if (!el) return
-    const io = new IntersectionObserver(
-      (entries) => {
-        const e = entries[0]
-        if (e.isIntersecting && e.intersectionRatio >= 0.6) {
-          onHover(project.id)
-        }
-      },
-      { threshold: [0, 0.6, 1] }
-    )
-    io.observe(el)
-    return () => io.disconnect()
-  }, [isTouch, project.id, onHover])
-
   // Drive playback
   useEffect(() => {
     const v = videoRef.current
     if (!v) return
     if (isActive) {
       v.muted = userMuted
-      v.volume = 0.6
+      v.volume = 0.4
       const tryPlay = async () => {
         try {
           await v.play()
@@ -261,13 +243,48 @@ function GridTile({ project, onOpen, onHover, hovered, anyHovered, index, isTouc
     }
   }, [isActive, userMuted])
 
-  // Click on tile → toggle mute. Click on open arrow → open cinematic.
-  const handleTileClick = () => {
-    if (!isActive) {
+  // Touch gestures: long-press to activate (play with sound), tap to toggle mute
+  const longPressFired = useRef(false)
+  const pressTimer = useRef(null)
+  const pressStart = useRef({ x: 0, y: 0 })
+
+  const handleTouchStart = (e) => {
+    if (!isTouch) return
+    longPressFired.current = false
+    const t = e.touches[0]
+    pressStart.current = { x: t.clientX, y: t.clientY }
+    clearTimeout(pressTimer.current)
+    pressTimer.current = setTimeout(() => {
+      longPressFired.current = true
+      setUserMuted(false)
       onHover(project.id)
+    }, 220)
+  }
+  const handleTouchMove = (e) => {
+    if (!isTouch) return
+    const t = e.touches[0]
+    const dx = Math.abs(t.clientX - pressStart.current.x)
+    const dy = Math.abs(t.clientY - pressStart.current.y)
+    if (dx > 8 || dy > 8) clearTimeout(pressTimer.current)
+  }
+  const handleTouchEnd = () => {
+    if (!isTouch) return
+    clearTimeout(pressTimer.current)
+  }
+
+  const handleTileClick = () => {
+    // If a long-press just activated, swallow the synthetic click
+    if (longPressFired.current) {
+      longPressFired.current = false
       return
     }
-    setUserMuted((m) => !m)
+    // Desktop: clicks just toggle mute when active (hover already activated it)
+    // Touch: a tap on an active tile toggles mute; a tap on an inactive tile does nothing
+    if (isActive) {
+      setUserMuted((m) => !m)
+    } else if (!isTouch) {
+      onHover(project.id)
+    }
   }
   const handleOpenClick = (e) => {
     e.stopPropagation()
@@ -282,6 +299,10 @@ function GridTile({ project, onOpen, onHover, hovered, anyHovered, index, isTouc
       onMouseEnter={() => !isTouch && onHover(project.id)}
       onMouseMove={handleMove}
       onMouseLeave={handleLeave}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
       onClick={handleTileClick}
       role="button"
       tabIndex={0}
@@ -379,10 +400,11 @@ function GridTile({ project, onOpen, onHover, hovered, anyHovered, index, isTouc
           </motion.button>
         </div>
 
-        {/* Center — audio status indicator */}
+        {/* Center — audio status / hold-to-play hint */}
         <AnimatePresence>
-          {isActive && (
+          {isActive ? (
             <motion.div
+              key="audio"
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 6 }}
@@ -401,7 +423,19 @@ function GridTile({ project, onOpen, onHover, hovered, anyHovered, index, isTouc
                 </>
               )}
             </motion.div>
-          )}
+          ) : isTouch ? (
+            <motion.div
+              key="hold"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 0.85, y: 0 }}
+              exit={{ opacity: 0, y: 6 }}
+              transition={{ duration: 0.3 }}
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 px-3 py-1.5 bg-bg/60 backdrop-blur-md border border-on-surface/15 font-mono text-[9px] tracking-[0.35em] uppercase text-on-surface/75 pointer-events-none"
+            >
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: ACCENT }} />
+              hold to play
+            </motion.div>
+          ) : null}
         </AnimatePresence>
       </div>
     </motion.div>
@@ -414,6 +448,7 @@ function GridTile({ project, onOpen, onHover, hovered, anyHovered, index, isTouc
 function CinematicOverlay({ project, onClose, onPrev, onNext }) {
   const videoRef = useRef(null)
   const [muted, setMuted] = useState(false)
+  const swipeStart = useRef(null)
 
   useEffect(() => {
     const v = videoRef.current
@@ -465,6 +500,14 @@ function CinematicOverlay({ project, onClose, onPrev, onNext }) {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.5, ease }}
       className="fixed inset-0 z-50 bg-black"
+      onTouchStart={(e) => { swipeStart.current = e.touches[0].clientX }}
+      onTouchEnd={(e) => {
+        if (swipeStart.current == null) return
+        const dx = e.changedTouches[0].clientX - swipeStart.current
+        swipeStart.current = null
+        if (Math.abs(dx) < 60) return
+        if (dx < 0) onNext(); else onPrev()
+      }}
     >
       <motion.video
         key={project.id}
@@ -511,16 +554,16 @@ function CinematicOverlay({ project, onClose, onPrev, onNext }) {
       <button
         onClick={onPrev}
         aria-label="Previous"
-        className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 border border-on-surface/30 text-on-surface hover:border-gold hover:text-gold items-center justify-center transition-colors z-20 rotate-180 backdrop-blur"
+        className="flex absolute left-3 md:left-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 border border-on-surface/30 text-on-surface hover:border-gold hover:text-gold items-center justify-center transition-colors z-20 rotate-180 backdrop-blur bg-bg/30"
       >
-        <ArrowUpRight className="w-4 h-4" strokeWidth={1.5} />
+        <ArrowUpRight className="w-3.5 h-3.5 md:w-4 md:h-4" strokeWidth={1.5} />
       </button>
       <button
         onClick={onNext}
         aria-label="Next"
-        className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 border border-on-surface/30 text-on-surface hover:border-gold hover:text-gold items-center justify-center transition-colors z-20 backdrop-blur"
+        className="flex absolute right-3 md:right-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 border border-on-surface/30 text-on-surface hover:border-gold hover:text-gold items-center justify-center transition-colors z-20 backdrop-blur bg-bg/30"
       >
-        <ArrowUpRight className="w-4 h-4" strokeWidth={1.5} />
+        <ArrowUpRight className="w-3.5 h-3.5 md:w-4 md:h-4" strokeWidth={1.5} />
       </button>
 
       <motion.div
@@ -638,7 +681,7 @@ export default function Projects() {
           </h1>
           <div className="mt-5 md:mt-7 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
             <p className="text-on-surface/60 text-sm md:text-base font-light leading-relaxed max-w-lg">
-              Six frames running in parallel. Each one a collaboration with a partner. Hover (or scroll) to play — tap to mute. Tap the arrow to step inside.
+              Six frames running in parallel. Each one a collaboration with a partner. Hover (or hold) to play — tap to mute. Tap the arrow to step inside.
             </p>
             <div className="flex items-center gap-3 font-mono text-[10px] tracking-[0.4em] uppercase text-on-surface/40">
               <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
@@ -684,7 +727,7 @@ export default function Projects() {
         {/* Footer rail */}
         <div className="max-w-[1500px] mx-auto mt-12 md:mt-16 pt-8 border-t border-on-surface/10 flex items-end justify-between gap-6 flex-wrap">
           <div className="font-mono text-[10px] tracking-[0.35em] uppercase text-on-surface/40 max-w-md leading-loose">
-            tap to mute · arrow to expand · esc to exit
+            hold to play · tap to mute · swipe inside · esc to exit
           </div>
           <Link
             to="/contact?type=booking"
